@@ -1,13 +1,14 @@
 // lib/home_siswa.dart
 import 'package:flutter/material.dart';
 import 'map_shell.dart';
+import 'chat_list.dart';
 
 // -----------------------
 // Theme colors (konstan dipakai di beberapa tempat)
 const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
-// -----------------------
 
+// -----------------------
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -22,7 +23,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> pages = [
     const HomeContent(), // index 0 -> content yang kamu punya
     const Center(child: Text("Materi (placeholder)")),
-    const Center(child: Text("Chat (placeholder)")),
+    ChatListPage(),
     const Center(child: Text("Profil (placeholder)")),
   ];
 
@@ -106,14 +107,20 @@ class HomeContent extends StatelessWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 28,
+                    radius:
+                        34, // 🔥 dari 28 → 34 biar lebih besar dan proporsional
                     backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.school_rounded,
-                      color: Color(0xFF0A2A43),
-                      size: 28,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        "assets/images/logo.png",
+                        width: 55,
+                        height: 55,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
+
                   const SizedBox(width: 15),
                   const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,14 +215,19 @@ class HomeContent extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Cards
+            // Cards (lebih lengkap sesuai kurikulum)
             TingkatanCard(
               title: "SD",
               subjects: [
                 {"icon": Icons.calculate_rounded, "name": "Matematika"},
                 {"icon": Icons.menu_book_rounded, "name": "Bahasa Indo"},
-                {"icon": Icons.public_rounded, "name": "IPA"},
-                {"icon": Icons.map_rounded, "name": "IPS"},
+                {"icon": Icons.science_rounded, "name": "IPA"},
+                {"icon": Icons.public_rounded, "name": "IPS"},
+                {"icon": Icons.flag_circle_rounded, "name": "PPKn"},
+                {"icon": Icons.mosque_rounded, "name": "PAI / Agama"},
+                {"icon": Icons.sports_soccer_rounded, "name": "PJOK"},
+                {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
+                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
               ],
             ),
 
@@ -225,7 +237,14 @@ class HomeContent extends StatelessWidget {
                 {"icon": Icons.calculate_rounded, "name": "Matematika"},
                 {"icon": Icons.science_rounded, "name": "IPA"},
                 {"icon": Icons.public_rounded, "name": "IPS"},
-                {"icon": Icons.language_rounded, "name": "Inggris"},
+                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indo"},
+                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
+                {"icon": Icons.computer_rounded, "name": "Informatika"},
+                {"icon": Icons.flag_rounded, "name": "PPKn"},
+                {"icon": Icons.mosque_rounded, "name": "PAI / Agama"},
+                {"icon": Icons.sports_basketball_rounded, "name": "PJOK"},
+                {"icon": Icons.brush_rounded, "name": "Seni Budaya"},
+                {"icon": Icons.handyman_rounded, "name": "Prakarya"},
               ],
             ),
 
@@ -233,9 +252,23 @@ class HomeContent extends StatelessWidget {
               title: "SMA",
               subjects: [
                 {"icon": Icons.calculate_rounded, "name": "Matematika"},
-                {"icon": Icons.science_rounded, "name": "Fisika"},
-                {"icon": Icons.biotech_rounded, "name": "Biologi"},
+                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indo"},
+                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
                 {"icon": Icons.history_edu_rounded, "name": "Sejarah"},
+                {"icon": Icons.flag_rounded, "name": "PPKn"},
+                {"icon": Icons.mosque_rounded, "name": "Agama"},
+                // IPA
+                {"icon": Icons.science_rounded, "name": "Fisika"},
+                {"icon": Icons.bubble_chart_rounded, "name": "Kimia"},
+                {"icon": Icons.biotech_rounded, "name": "Biologi"},
+                // IPS
+                {"icon": Icons.public_rounded, "name": "Geografi"},
+                {"icon": Icons.groups_rounded, "name": "Sosiologi"},
+                {"icon": Icons.attach_money_rounded, "name": "Ekonomi"},
+                // Tambahan
+                {"icon": Icons.computer_rounded, "name": "Informatika"},
+                {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
+                {"icon": Icons.sports_martial_arts_rounded, "name": "PJOK"},
               ],
             ),
 
@@ -264,9 +297,18 @@ class _TingkatanCardState extends State<TingkatanCard> {
 
   @override
   Widget build(BuildContext context) {
+    // compute visible subjects & full title before building widgets
     final visible = expanded
         ? widget.subjects
         : widget.subjects.take(3).toList();
+
+    final fullTitle =
+        {
+          "SD": "Sekolah Dasar",
+          "SMP": "Sekolah Menengah Pertama",
+          "SMA": "Sekolah Menengah Atas",
+        }[widget.title] ??
+        widget.title;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -277,7 +319,7 @@ class _TingkatanCardState extends State<TingkatanCard> {
         boxShadow: [
           BoxShadow(
             blurRadius: 22,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
             color: Colors.black.withOpacity(0.06),
           ),
         ],
@@ -285,14 +327,28 @@ class _TingkatanCardState extends State<TingkatanCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // TITLE
-          Text(
-            widget.title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: navy,
-            ),
+          // TITLE + GARIS KUNING
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                fullTitle,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: navy,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: 60,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: yellowAcc,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 20),

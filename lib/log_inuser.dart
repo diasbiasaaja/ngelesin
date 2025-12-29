@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'regis_user.dart';
 import 'home_siswa.dart'; // <-- PENTING! ganti sesuai nama file homepage kamu
+import 'pages/home_siswa/home_siswa_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -112,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                             context,
                             MaterialPageRoute(
                               builder: (c) =>
-                                  HomePage(), // <-- PAKAI HOMEPAGE KAMU
+                                  const HomeSiswaPage(), // <-- PAKAI HOMEPAGE KAMU
                             ),
                           );
                         } else {

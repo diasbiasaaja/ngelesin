@@ -1,11 +1,42 @@
+// lib/login_guru.dart
 import 'package:flutter/material.dart';
 import 'package:ngelesin/regis_guru.dart';
 
-class LoginGuruPage extends StatelessWidget {
+import 'pages/home_guru/home_guru_page.dart';
+
+class LoginGuruPage extends StatefulWidget {
   const LoginGuruPage({super.key});
 
   @override
+  State<LoginGuruPage> createState() => _LoginGuruPageState();
+}
+
+class _LoginGuruPageState extends State<LoginGuruPage> {
+  final TextEditingController emailC = TextEditingController();
+  final TextEditingController passC = TextEditingController();
+
+  @override
+  void dispose() {
+    emailC.dispose();
+    passC.dispose();
+    super.dispose();
+  }
+
+  void _showMsg(String text, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        backgroundColor: success ? Colors.green.shade600 : null,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Dummy credentials (ubah sesuai kebutuhan)
+    const dummyEmail = "test@gmail.com";
+    const dummyPass = "123456";
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -37,14 +68,14 @@ class LoginGuruPage extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                  color: Color(0xFF0A1A44), // navy border
+                  color: const Color(0xFF0A1A44), // navy border
                   width: 3,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
                     blurRadius: 12,
-                    offset: Offset(0, 5),
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
@@ -53,9 +84,11 @@ class LoginGuruPage extends StatelessWidget {
                 children: [
                   // EMAIL
                   TextField(
+                    controller: emailC,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: "Email",
-                      labelStyle: TextStyle(color: Colors.black87),
+                      labelStyle: const TextStyle(color: Colors.black87),
                       filled: true,
                       fillColor: Colors.grey[200],
                       border: OutlineInputBorder(
@@ -69,10 +102,11 @@ class LoginGuruPage extends StatelessWidget {
 
                   // PASSWORD
                   TextField(
+                    controller: passC,
                     obscureText: true,
                     decoration: InputDecoration(
                       labelText: "Password",
-                      labelStyle: TextStyle(color: Colors.black87),
+                      labelStyle: const TextStyle(color: Colors.black87),
                       filled: true,
                       fillColor: Colors.grey[200],
                       border: OutlineInputBorder(
@@ -89,11 +123,31 @@ class LoginGuruPage extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pushReplacementNamed(context, "/homeGuru");
+                        final email = emailC.text.trim();
+                        final pass = passC.text.trim();
+
+                        if (email.isEmpty || pass.isEmpty) {
+                          _showMsg("Email dan password harus diisi!");
+                          return;
+                        }
+
+                        if (email == dummyEmail && pass == dummyPass) {
+                          _showMsg("Login berhasil 🎉", success: true);
+
+                          // navigasi ke halaman home guru (replace so user can't go back)
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (c) => const HomeGuruPage(),
+                            ),
+                          );
+                        } else {
+                          _showMsg("Email atau password salah!");
+                        }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFF2C94C),
-                        padding: EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: const Color(0xFFF2C94C),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -124,10 +178,12 @@ class LoginGuruPage extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => RegisterGuru()),
+                      MaterialPageRoute(
+                        builder: (context) => const RegisterGuru(),
+                      ),
                     );
                   },
-                  child: Text(
+                  child: const Text(
                     "Daftar",
                     style: TextStyle(
                       color: Color(0xFF0A1A44),
