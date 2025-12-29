@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
-import '../../../models/guru_model.dart';
 
-class GuruCard extends StatelessWidget {
-  final Guru guru;
+class MateriCard extends StatelessWidget {
+  final String namaGuru;
+  final String mapel;
+  final String tanggal;
+  final String jam;
   final VoidCallback onDetail;
-  final String? jadwalJam; // 👈 optional
-  final bool compact; // 👈 mode home / list
 
-  const GuruCard({
+  const MateriCard({
     super.key,
-    required this.guru,
+    required this.namaGuru,
+    required this.mapel,
+    required this.tanggal,
+    required this.jam,
     required this.onDetail,
-    this.jadwalJam,
-    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F4FB),
@@ -26,27 +27,20 @@ class GuruCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: compact ? 22 : 28,
-            backgroundImage: AssetImage(guru.fotoUrl),
-          ),
-          const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  guru.nama,
+                  namaGuru,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(guru.mapel),
-                if (jadwalJam != null)
-                  Text(jadwalJam!, style: const TextStyle(fontSize: 12)),
+                Text(mapel),
+                const SizedBox(height: 6),
+                Text("$tanggal • $jam"),
               ],
             ),
           ),
-
           ElevatedButton(onPressed: onDetail, child: const Text("Detail")),
         ],
       ),

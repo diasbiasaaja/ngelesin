@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-const navy = Color(0xFF0A2A43);
-const yellowAcc = Color(0xFFFFC947);
-
-/// ================= JUDUL "JADWAL HARI INI" =================
 class JadwalHariIni extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -14,27 +10,15 @@ class JadwalHariIni extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
           children: [
             const Text(
               "Jadwal Hari Ini",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: navy,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 6),
-            Container(
-              width: 120,
-              height: 4,
-              decoration: BoxDecoration(
-                color: yellowAcc,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
+            const Spacer(),
+            const Icon(Icons.keyboard_arrow_down),
           ],
         ),
       ),
@@ -42,23 +26,24 @@ class JadwalHariIni extends StatelessWidget {
   }
 }
 
-/// ================= CARD JADWAL GURU =================
 class JadwalGuruCard extends StatelessWidget {
   final String namaGuru;
   final String mapel;
   final String jam;
+  final VoidCallback onDetail;
 
   const JadwalGuruCard({
     super.key,
     required this.namaGuru,
     required this.mapel,
     required this.jam,
+    required this.onDetail,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F4FB),
@@ -66,28 +51,22 @@ class JadwalGuruCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const CircleAvatar(radius: 22, child: Icon(Icons.person)),
+          const CircleAvatar(child: Icon(Icons.person)),
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   namaGuru,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(mapel, style: const TextStyle(color: Colors.grey)),
-                const SizedBox(height: 4),
+                Text(mapel),
                 Text(jam, style: const TextStyle(fontSize: 12)),
               ],
             ),
           ),
-
-          ElevatedButton(onPressed: () {}, child: const Text("Detail")),
+          ElevatedButton(onPressed: onDetail, child: const Text("Detail")),
         ],
       ),
     );

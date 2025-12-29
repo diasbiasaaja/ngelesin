@@ -1,17 +1,15 @@
-// lib/login_guru.dart
 import 'package:flutter/material.dart';
-import 'package:ngelesin/regis_guru.dart';
+import '../regis/regis_user.dart';
+import '../home_siswa/home_siswa_page.dart';
 
-import 'pages/home_guru/home_guru_page.dart';
-
-class LoginGuruPage extends StatefulWidget {
-  const LoginGuruPage({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<LoginGuruPage> createState() => _LoginGuruPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginGuruPageState extends State<LoginGuruPage> {
+class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailC = TextEditingController();
   final TextEditingController passC = TextEditingController();
 
@@ -22,73 +20,52 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
     super.dispose();
   }
 
-  void _showMsg(String text, {bool success = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        backgroundColor: success ? Colors.green.shade600 : null,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Dummy credentials (ubah sesuai kebutuhan)
-    const dummyEmail = "test@gmail.com";
-    const dummyPass = "123456";
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 70),
+            const SizedBox(height: 80),
 
-            // LOGO DI LUAR KOTAK
             Image.asset("assets/images/logo.png", width: 110),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
 
             const Text(
-              "LOGIN GURU",
+              "COLLAGE PRIVATE",
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF0A1A44),
+                letterSpacing: 1.5,
               ),
             ),
 
-            const SizedBox(height: 35),
+            const SizedBox(height: 40),
 
-            // ================= KOTAK LOGIN =================
             Container(
               width: 330,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 35),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: const Color(0xFF0A1A44), // navy border
-                  width: 3,
-                ),
+                border: Border.all(color: Color(0xFF0A1A44), width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withOpacity(0.10),
                     blurRadius: 12,
-                    offset: const Offset(0, 5),
+                    offset: Offset(0, 5),
                   ),
                 ],
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // EMAIL
                   TextField(
                     controller: emailC,
-                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: "Email",
-                      labelStyle: const TextStyle(color: Colors.black87),
                       filled: true,
                       fillColor: Colors.grey[200],
                       border: OutlineInputBorder(
@@ -100,13 +77,11 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
                   const SizedBox(height: 20),
 
-                  // PASSWORD
                   TextField(
                     controller: passC,
                     obscureText: true,
                     decoration: InputDecoration(
                       labelText: "Password",
-                      labelStyle: const TextStyle(color: Colors.black87),
                       filled: true,
                       fillColor: Colors.grey[200],
                       border: OutlineInputBorder(
@@ -116,38 +91,41 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 30),
 
-                  // TOMBOL LOGIN
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        final email = emailC.text.trim();
-                        final pass = passC.text.trim();
+                        String email = emailC.text.trim();
+                        String pass = passC.text.trim();
 
-                        if (email.isEmpty || pass.isEmpty) {
-                          _showMsg("Email dan password harus diisi!");
-                          return;
-                        }
+                        const dummyEmail = "test@gmail.com";
+                        const dummyPass = "123456";
 
                         if (email == dummyEmail && pass == dummyPass) {
-                          _showMsg("Login berhasil 🎉", success: true);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Login Berhasil 🎉")),
+                          );
 
-                          // navigasi ke halaman home guru (replace so user can't go back)
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (c) => const HomeGuruPage(),
+                              builder: (c) =>
+                                  const HomeSiswaPage(), // <-- PAKAI HOMEPAGE KAMU
                             ),
                           );
                         } else {
-                          _showMsg("Email atau password salah!");
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Email atau password salah!"),
+                            ),
+                          );
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF2C94C),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: Color(0xFFF2C94C),
+                        padding: EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -168,7 +146,6 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
             const SizedBox(height: 20),
 
-            // BELUM PUNYA AKUN?
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -178,12 +155,10 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const RegisterGuru(),
-                      ),
+                      MaterialPageRoute(builder: (context) => RegisterMurid()),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     "Daftar",
                     style: TextStyle(
                       color: Color(0xFF0A1A44),

@@ -1,35 +1,56 @@
 import 'package:flutter/material.dart';
+
 import 'widgets/siswa_header.dart';
 import 'widgets/search_bar.dart';
 import 'widgets/tingkatan_card.dart';
 import 'widgets/jadwal.dart';
-import 'package:ngelesin/pages/guru_list/guru_list_page.dart';
 
-class HomeSiswaContent extends StatefulWidget {
+import '../guru_list/guru_list_page.dart';
+import '../detail/detail_guru_jadwal_page.dart';
+
+import '/models/guru_model.dart';
+import '/models/booking.dart';
+
+class HomeSiswaContent extends StatelessWidget {
   const HomeSiswaContent({super.key});
-
-  @override
-  State<HomeSiswaContent> createState() => _HomeSiswaContentState();
-}
-
-class _HomeSiswaContentState extends State<HomeSiswaContent> {
-  String searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
     final bottomPadding =
         MediaQuery.of(context).padding.bottom + kBottomNavigationBarHeight + 80;
-    final TextEditingController searchController = TextEditingController();
-    final ScrollController _scrollController = ScrollController();
-    final GlobalKey _jadwalKey = GlobalKey();
+
+    final GlobalKey jadwalKey = GlobalKey();
+
+    // ================= DUMMY DATA JADWAL HARI INI =================
+    final List<Booking> todayBookings = [
+      Booking(
+        guru: Guru(
+          nama: "Pak Budi",
+          mapel: "Matematika",
+          bio: "Guru berpengalaman 10 tahun, fokus pemahaman konsep.",
+          fotoUrl: "assets/images/guru1.png",
+          rating: 4.9,
+          totalUlasan: 23,
+          ulasan: [],
+          hargaPerJam: 100000,
+          hargaKelompok: null,
+          jarakKm: 2.3,
+        ),
+        tanggal: DateTime.now(),
+        jam: const TimeOfDay(hour: 12, minute: 0),
+        jumlahSiswa: 1,
+        alamat: "Jl. Merdeka No. 10",
+        sudahBayar: true,
+      ),
+    ];
 
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
-        controller: _scrollController,
         padding: EdgeInsets.only(bottom: bottomPadding),
         child: Column(
           children: [
+            // ================= HEADER =================
             const siswaHeader(),
 
             // garis kuning
@@ -37,37 +58,33 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
 
             const SizedBox(height: 20),
 
-            const SizedBox(height: 12),
-
-            // 🔍 SEARCH BAR AKTIF
+            // ================= SEARCH =================
             SiswaSearchBar(
-              controller: searchController,
-              onChanged: (value) {
-                // nanti buat filter guru/mapel
-              },
+              controller: TextEditingController(),
+              onChanged: (_) {},
             ),
 
             const SizedBox(height: 20),
 
-            // MAPEL CARD
+            // ================= MAPEL =================
             TingkatanCard(
               title: "SD",
-              subjects: [
+              subjects: const [
                 {"icon": Icons.calculate_rounded, "name": "Matematika"},
-                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indo"},
+                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
                 {"icon": Icons.science_rounded, "name": "IPA"},
                 {"icon": Icons.public_rounded, "name": "IPS"},
-                {"icon": Icons.flag_circle_rounded, "name": "PPKn"},
+                {"icon": Icons.flag_rounded, "name": "PPKn"},
                 {"icon": Icons.mosque_rounded, "name": "PAI / Agama"},
                 {"icon": Icons.sports_soccer_rounded, "name": "PJOK"},
                 {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
                 {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
               ],
-              onSubjectTap: (subject) {
+              onSubjectTap: (mapel) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => GuruListPage(jenjang: "SD", mapel: subject),
+                    builder: (_) => GuruListPage(jenjang: "SD", mapel: mapel),
                   ),
                 );
               },
@@ -75,25 +92,23 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
 
             TingkatanCard(
               title: "SMP",
-              subjects: [
+              subjects: const [
                 {"icon": Icons.calculate_rounded, "name": "Matematika"},
+                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
+                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
                 {"icon": Icons.science_rounded, "name": "IPA"},
                 {"icon": Icons.public_rounded, "name": "IPS"},
-                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indo"},
-                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
-                {"icon": Icons.computer_rounded, "name": "Informatika"},
                 {"icon": Icons.flag_rounded, "name": "PPKn"},
                 {"icon": Icons.mosque_rounded, "name": "PAI / Agama"},
                 {"icon": Icons.sports_basketball_rounded, "name": "PJOK"},
+                {"icon": Icons.computer_rounded, "name": "Informatika"},
                 {"icon": Icons.brush_rounded, "name": "Seni Budaya"},
-                {"icon": Icons.handyman_rounded, "name": "Prakarya"},
               ],
-              onSubjectTap: (subject) {
+              onSubjectTap: (mapel) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        GuruListPage(jenjang: "SMP", mapel: subject),
+                    builder: (_) => GuruListPage(jenjang: "SMP", mapel: mapel),
                   ),
                 );
               },
@@ -101,62 +116,67 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
 
             TingkatanCard(
               title: "SMA",
-              subjects: [
+              subjects: const [
                 {"icon": Icons.calculate_rounded, "name": "Matematika"},
-                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indo"},
+                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
                 {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
                 {"icon": Icons.history_edu_rounded, "name": "Sejarah"},
                 {"icon": Icons.flag_rounded, "name": "PPKn"},
                 {"icon": Icons.mosque_rounded, "name": "Agama"},
-                // IPA
                 {"icon": Icons.science_rounded, "name": "Fisika"},
                 {"icon": Icons.bubble_chart_rounded, "name": "Kimia"},
                 {"icon": Icons.biotech_rounded, "name": "Biologi"},
-                // IPS
                 {"icon": Icons.public_rounded, "name": "Geografi"},
                 {"icon": Icons.groups_rounded, "name": "Sosiologi"},
                 {"icon": Icons.attach_money_rounded, "name": "Ekonomi"},
-                // Tambahan
                 {"icon": Icons.computer_rounded, "name": "Informatika"},
                 {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
                 {"icon": Icons.sports_martial_arts_rounded, "name": "PJOK"},
               ],
-              onSubjectTap: (subject) {
+              onSubjectTap: (mapel) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        GuruListPage(jenjang: "SMA", mapel: subject),
+                    builder: (_) => GuruListPage(jenjang: "SMA", mapel: mapel),
                   ),
                 );
               },
             ),
-            const SizedBox(height: 8),
 
-            //jadwal hari ini
+            const SizedBox(height: 16),
+
+            // ================= JADWAL HARI INI =================
             JadwalHariIni(
               onTap: () {
                 Scrollable.ensureVisible(
-                  _jadwalKey.currentContext!,
+                  jadwalKey.currentContext!,
                   duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
                 );
               },
             ),
 
-            JadwalGuruCard(
-              namaGuru: "Pak Budi",
-              mapel: "Matematika",
-              jam: "12.00 - 15.00",
+            const SizedBox(height: 12),
+
+            Column(
+              key: jadwalKey,
+              children: todayBookings.map((booking) {
+                return JadwalGuruCard(
+                  namaGuru: booking.guru.nama,
+                  mapel: booking.guru.mapel,
+                  jam: booking.jam.format(context),
+                  onDetail: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookingDetailPage(booking: booking),
+                      ),
+                    );
+                  },
+                );
+              }).toList(),
             ),
 
-            JadwalGuruCard(
-              namaGuru: "Bu Rina",
-              mapel: "IPA",
-              jam: "16.00 - 18.00",
-            ),
-
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
           ],
         ),
       ),

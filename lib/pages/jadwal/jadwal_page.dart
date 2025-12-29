@@ -1,56 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import '../detail/detail_siswa.dart';
+import '../../models/teaching_request.dart';
 
 // ================= MODEL (DUMMY) =================
-class TeachingRequest {
-  final String namaSiswa;
-  final String mapel;
-  final String alamat;
-  final int harga;
-  final DateTime tanggal;
-
-  TeachingRequest({
-    required this.namaSiswa,
-    required this.mapel,
-    required this.alamat,
-    required this.harga,
-    required this.tanggal,
-  });
-}
 
 // ================= DETAIL SISWA =================
-class DetailSiswaPage extends StatelessWidget {
-  final TeachingRequest request;
-
-  const DetailSiswaPage({super.key, required this.request});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Detail Siswa")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const CircleAvatar(radius: 40),
-            const SizedBox(height: 12),
-            Text(
-              request.namaSiswa,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text("SD / SMP • ${request.mapel}"),
-            const SizedBox(height: 16),
-            Text("Alamat\n${request.alamat}"),
-            const SizedBox(height: 8),
-            Text("Harga\nRp ${request.harga} / sesi"),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ================= JADWAL PAGE =================
 class JadwalPage extends StatefulWidget {
@@ -74,16 +30,24 @@ class _JadwalPageState extends State<JadwalPage> {
       TeachingRequest(
         namaSiswa: "Rudi",
         mapel: "Matematika",
-        alamat: "Jakarta Barat • 2 km",
+        alamat: "Jakarta Barat",
+        jarak: "2 km",
         harga: 85000,
+        jumlahSiswa: 1,
         tanggal: DateTime.now(),
+        jamMulai: const TimeOfDay(hour: 12, minute: 0), // ✅ koma
+        jamSelesai: const TimeOfDay(hour: 15, minute: 0), // ✅ koma
       ),
       TeachingRequest(
         namaSiswa: "Ramon",
         mapel: "Matematika",
-        alamat: "Jakarta Barat • 2 km",
+        alamat: "Jakarta Barat",
+        jarak: "2 km",
         harga: 90000,
+        jumlahSiswa: 2,
         tanggal: DateTime.now().add(const Duration(days: 2)),
+        jamMulai: const TimeOfDay(hour: 16, minute: 0), // ✅ koma
+        jamSelesai: const TimeOfDay(hour: 18, minute: 0), // ✅ koma
       ),
     ];
   }
@@ -197,7 +161,7 @@ class _JadwalPageState extends State<JadwalPage> {
 
 // ================= JADWAL TILE =================
 class _JadwalTile extends StatelessWidget {
-  final TeachingRequest request;
+  final TeachingRequest request; // ✅ INI YANG KURANG
 
   const _JadwalTile({required this.request});
 
@@ -207,7 +171,12 @@ class _JadwalTile extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => DetailSiswaPage(request: request)),
+          MaterialPageRoute(
+            builder: (_) => DetailSiswaPage(
+              // ✅ NAMA BENAR
+              request: request, // ✅ DATA DIKIRIM
+            ),
+          ),
         );
       },
       child: Container(

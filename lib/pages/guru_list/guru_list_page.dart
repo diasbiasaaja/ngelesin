@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/guru_model.dart';
 import 'widgets/guru_card.dart';
+import '../detail/guru_detail_page.dart';
 
 class GuruListPage extends StatelessWidget {
   final String mapel;
@@ -10,67 +11,42 @@ class GuruListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 DATA DUMMY (NANTI BACKEND)
-    final List<GuruModel> gurus = [
-      GuruModel(
+    final List<Guru> gurus = [
+      Guru(
         nama: "Pak Budi",
-        mapel: "$jenjang $mapel",
-        tanggal: "15/12/2025",
-        jam: "12.00 - 15.00",
-        jarak: 1.2,
+        mapel: "SMA Matematika",
+        bio: "Guru berpengalaman 10 tahun, fokus pemahaman konsep.",
+        fotoUrl: "assets/images/user_dummy.png",
         rating: 4.9,
-      ),
-      GuruModel(
-        nama: "Bu Rina",
-        mapel: "$jenjang $mapel",
-        tanggal: "15/12/2025",
-        jam: "16.00 - 18.00",
-        jarak: 2.5,
-        rating: 4.7,
+        totalUlasan: 23,
+        jarakKm: 1.2,
+        hargaPerJam: 100000,
+        hargaKelompok: HargaKelompok(harga1_5: 80000, harga6_10: 65000),
+        ulasan: [
+          GuruUlasan(nama: "Rio", komentar: "Penjelasan mudah dimengerti"),
+          GuruUlasan(nama: "Nanda", komentar: "Sabar dan ramah"),
+        ],
       ),
     ];
 
-    // 🔥 SORT: TERDEKAT → RATING
-    gurus.sort((a, b) {
-      final jarakCompare = a.jarak.compareTo(b.jarak);
-      if (jarakCompare != 0) return jarakCompare;
-      return b.rating.compareTo(a.rating);
-    });
-
     return Scaffold(
       appBar: AppBar(title: Text("$jenjang - $mapel")),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // garis kuning
-            Container(
-              width: 480,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Expanded(
-              child: ListView(
-                children: gurus
-                    .map(
-                      (g) => GuruCard(
-                        guru: g,
-                        onDetail: () {
-                          // nanti ke detail guru
-                        },
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ],
-        ),
+        children: gurus.map((g) {
+          return Builder(
+            builder: (context) {
+              return GuruCard(
+                guru: g,
+                onDetail: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => GuruDetailPage(guru: g)),
+                  );
+                },
+              );
+            },
+          );
+        }).toList(),
       ),
     );
   }

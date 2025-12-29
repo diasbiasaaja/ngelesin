@@ -36,7 +36,6 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // PINDAH KE LOGIN
     Future.delayed(const Duration(seconds: 6), () {
       Navigator.pushReplacementNamed(context, "/rolePage");
     });

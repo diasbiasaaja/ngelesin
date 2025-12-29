@@ -24,12 +24,14 @@ class ChatBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.7,
         ),
         decoration: BoxDecoration(
-          color: isGuru ? theme.guruBubble : theme.muridBubble,
+          color: isGuru ? theme.guruBubbleColor : theme.muridBubbleColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           text,
-          style: TextStyle(color: isGuru ? Colors.white : Colors.black87),
+          style: TextStyle(
+            color: isGuru ? theme.guruTextColor : theme.muridTextColor,
+          ),
         ),
       ),
     );

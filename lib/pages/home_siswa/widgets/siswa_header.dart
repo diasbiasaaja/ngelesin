@@ -12,7 +12,12 @@ class siswaHeader extends StatelessWidget {
       children: [
         // ================= HEADER UTAMA =================
         Container(
-          padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            MediaQuery.of(context).padding.top + 16, // 🔥 FIX DI SINI
+            20,
+            24,
+          ),
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF0A2A43), Color(0xFF1B3B5A)],

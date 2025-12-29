@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'theme/colors.dart';
+import 'materi_aplod_page.dart';
+import '../../theme/colors.dart';
 
 class MateriPage extends StatelessWidget {
   const MateriPage({super.key});
@@ -8,7 +9,7 @@ class MateriPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: navy,
+        backgroundColor: Color(0xFF0A2A43),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -86,9 +87,14 @@ class _MateriTile extends StatelessWidget {
               Text(price, style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MateriUploadPage()),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: yellowAcc,
+                  backgroundColor: Color(0xFFFFC947),
                   foregroundColor: Colors.black,
                 ),
                 child: const Text("Masuk"),

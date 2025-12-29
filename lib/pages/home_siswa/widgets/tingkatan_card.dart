@@ -25,6 +25,23 @@ class _TingkatanCardState extends State<TingkatanCard> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // ================= RESPONSIVE SIZE =================
+    double circleSize = 64;
+    double iconSize = 28;
+    double fontSize = 12;
+
+    if (screenWidth < 360) {
+      circleSize = 56;
+      iconSize = 24;
+      fontSize = 11;
+    } else if (screenWidth > 600) {
+      circleSize = 72;
+      iconSize = 32;
+      fontSize = 13;
+    }
+
     final visibleSubjects = expanded
         ? widget.subjects
         : widget.subjects.take(3).toList();
@@ -46,7 +63,6 @@ class _TingkatanCardState extends State<TingkatanCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ===== TITLE + GARIS KUNING =====
           Text(
             widget.title,
             style: const TextStyle(
@@ -67,10 +83,10 @@ class _TingkatanCardState extends State<TingkatanCard> {
 
           const SizedBox(height: 20),
 
-          // ===== SUBJECT GRID =====
+          // ================= SUBJECT GRID =================
           Wrap(
-            spacing: 25,
-            runSpacing: 20,
+            spacing: 20,
+            runSpacing: 18,
             children: visibleSubjects.map((item) {
               return GestureDetector(
                 onTap: () {
@@ -81,8 +97,8 @@ class _TingkatanCardState extends State<TingkatanCard> {
                 child: Column(
                   children: [
                     Container(
-                      width: 72,
-                      height: 72,
+                      width: circleSize,
+                      height: circleSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -91,23 +107,23 @@ class _TingkatanCardState extends State<TingkatanCard> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                             color: Colors.black.withOpacity(0.06),
                           ),
                         ],
                       ),
-                      child: Icon(item["icon"], size: 34, color: navy),
+                      child: Icon(item["icon"], size: iconSize, color: navy),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
-                      width: 80,
+                      width: circleSize + 8,
                       child: Text(
                         item["name"],
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: navy,
-                          fontSize: 13,
+                          fontSize: fontSize,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -120,7 +136,7 @@ class _TingkatanCardState extends State<TingkatanCard> {
 
           const SizedBox(height: 16),
 
-          // ===== LIHAT SEMUA / SEDIKIT =====
+          // ================= TOGGLE =================
           Center(
             child: GestureDetector(
               onTap: () => setState(() => expanded = !expanded),

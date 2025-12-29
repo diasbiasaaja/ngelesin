@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'widgets/custom_navbar.dart';
 
 import 'guru_home_content.dart';
-import '../../jadwal_page.dart';
-import '../../chat_list.dart';
-import '../../MateriPage.dart';
+import '../jadwal/jadwal_page.dart';
+import '../../chat/chat_list.dart';
+import '../materi/MateriPage.dart';
+import '../profile/profile_page.dart';
 
 // ================= THEME =================
 const navy = Color(0xFF0A2A43);
@@ -24,7 +25,7 @@ class _HomeGuruPageState extends State<HomeGuruPage> {
     GuruHomeContent(),
     JadwalPage(),
     ChatListPage(),
-    Center(child: Text("Profil (placeholder)")),
+    ProfilePage(),
   ];
 
   @override

@@ -1,11 +1,11 @@
 // main.dart (ubah sedikit)
 import 'package:flutter/material.dart';
-import 'theme.dart'; // import theme.dart
-import 'package:ngelesin/login_guru.dart';
-import 'package:ngelesin/role_page.dart';
-import 'splash.dart';
-import 'log_inuser.dart';
-import 'role_page.dart';
+import 'theme/theme.dart';
+import 'package:ngelesin/pages/login/login_guru.dart';
+import 'package:ngelesin/pages/pembukaan/role_page.dart';
+import 'package:ngelesin/pages/pembukaan/splash.dart';
+import 'package:ngelesin/pages/login/log_inuser.dart';
+import 'package:ngelesin/pages/pembukaan/role_page.dart';
 
 void main() {
   runApp(const MyApp());

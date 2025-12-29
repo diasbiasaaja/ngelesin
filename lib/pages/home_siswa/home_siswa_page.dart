@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'home_siswa_content.dart';
 import 'widgets/custum_navbarsiswa.dart';
-import '../../chat_list.dart';
-import '../../map_shell.dart';
+import '../../chat/chat_list.dart';
+import '../map/map_shell.dart';
+import '../materi/materi_siswa.dart';
+import '../profile/profile_page.dart';
 
 const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
@@ -19,9 +21,9 @@ class _HomeSiswaPageState extends State<HomeSiswaPage> {
 
   final pages = const [
     HomeSiswaContent(),
-    Center(child: Text("Materi")),
+    MateriSiswaPage(),
     ChatListPage(),
-    Center(child: Text("Profil")),
+    ProfilePage(),
   ];
 
   @override

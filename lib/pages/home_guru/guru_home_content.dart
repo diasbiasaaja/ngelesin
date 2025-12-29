@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/teaching_request.dart';
-import '../../pages/detail_siswa/detail_siswa.dart';
+import '../detail/detail_siswa.dart';
 
 import 'widgets/guru_header.dart';
 import 'widgets/summary_row.dart';
@@ -18,12 +18,21 @@ class GuruHomeContent extends StatelessWidget {
     final bottomPadding =
         MediaQuery.of(context).padding.bottom + kBottomNavigationBarHeight + 90;
 
+    // ================= DUMMY REQUEST =================
     final rudiRequest = TeachingRequest(
       namaSiswa: "Ananda Rudi",
       mapel: "Matematika",
       alamat: "Jakarta Barat",
       jarak: "2 km",
       harga: 85000,
+      jumlahSiswa: 1,
+      tanggal: DateTime.now(),
+
+      // 🔥 TAMBAHAN PENTING
+      jamMulai: const TimeOfDay(hour: 12, minute: 0),
+      jamSelesai: const TimeOfDay(hour: 15, minute: 0),
+
+      fotoUrl: "",
     );
 
     return SafeArea(
@@ -47,6 +56,7 @@ class GuruHomeContent extends StatelessWidget {
               roleLabel: "Guru",
             ),
 
+            // ================= REQUEST TILE =================
             RequestTile(
               title: "Les Matematika - Ananda Rudi",
               subtitle: "Jakarta Barat • 2 km",
