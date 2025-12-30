@@ -21,15 +21,25 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
     final guru = widget.booking.guru;
     final booking = widget.booking;
 
+    // 🔥 FIX FINAL: keyboard + navbar + gesture bar
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final safeBottom = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text(guru.nama), centerTitle: true),
+      appBar: AppBar(
+        title: Text(guru.nama),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
           20,
           20,
           20,
-          MediaQuery.of(context).viewInsets.bottom + 20, // 🔥 FIX
+          bottomInset + safeBottom + 20, // ✅ AMAN TOTAL
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +69,7 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
 
             const SizedBox(height: 24),
 
-            // ================= JADWAL =================
+            // ================= DETAIL JADWAL =================
             _sectionTitle("Detail Jadwal"),
             _infoRow(
               "Tanggal",
@@ -80,26 +90,21 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
             const SizedBox(height: 24),
 
             // ================= CHAT =================
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.chat),
-                    label: const Text("Chat Guru"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatPage(
-                            title: guru.nama,
-                            theme: chatThemeDefault,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.chat),
+                label: const Text("Chat Guru"),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ChatPage(title: guru.nama, theme: chatThemeDefault),
+                    ),
+                  );
+                },
+              ),
             ),
 
             const SizedBox(height: 32),
@@ -134,8 +139,11 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
                 maxLines: 3,
                 decoration: InputDecoration(
                   hintText: "Tulis ulasan singkat...",
+                  filled: true,
+                  fillColor: const Color(0xFFF7F7F7),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
                 ),
               ),
@@ -148,7 +156,6 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
                   onPressed: rating == 0
                       ? null
                       : () {
-                          // nanti ke backend
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text("Ulasan berhasil dikirim"),

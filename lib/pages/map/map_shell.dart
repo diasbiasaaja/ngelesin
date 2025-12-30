@@ -1,16 +1,18 @@
-// lib/map_shell.dart
 import 'package:flutter/material.dart';
+import 'package:ngelesin/models/guru_model.dart';
+import '../detail/guru_detail_page.dart';
 
 const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
 
-/// Panggil dari FAB: showMapShell(context);
+/// Panggil dari FAB / button:
+/// showMapShell(context);
 void showMapShell(BuildContext context) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) {
+    builder: (_) {
       return FractionallySizedBox(
         heightFactor: 0.85,
         child: ClipRRect(
@@ -30,188 +32,212 @@ class MapShell extends StatefulWidget {
 }
 
 class _MapShellState extends State<MapShell> {
-  final List<Map<String, dynamic>> teachers = [
-    {
-      "id": "t1",
-      "name": "Bu Siti",
-      "subject": "Matematika",
-      "price": 75000,
-      "x": 0.46,
-      "y": 0.38,
-    },
-    {
-      "id": "t2",
-      "name": "Pak Budi",
-      "subject": "Fisika",
-      "price": 90000,
-      "x": 0.62,
-      "y": 0.52,
-    },
-    {
-      "id": "t3",
-      "name": "Mbak Rina",
-      "subject": "Bahasa Inggris",
-      "price": 65000,
-      "x": 0.28,
-      "y": 0.55,
-    },
+  late Guru selectedGuru;
+
+  final List<Guru> teachers = [
+    Guru(
+      nama: "Bu Siti",
+      mapel: "Matematika",
+      bio: "Guru berpengalaman 8 tahun, sabar dan komunikatif.",
+      fotoUrl: "assets/images/guru1.png",
+      rating: 4.8,
+      totalUlasan: 20,
+      ulasan: [
+        GuruUlasan(nama: "Andi", komentar: "Cara ngajarnya mudah dipahami"),
+        GuruUlasan(nama: "Rina", komentar: "Sabar dan ramah"),
+      ],
+      hargaPerJam: 75000,
+      hargaKelompok: HargaKelompok(harga1_5: 60000, harga6_10: 45000),
+      jarakKm: 1.2,
+    ),
   ];
 
-  String? selectedId;
+  @override
+  void initState() {
+    super.initState();
+    selectedGuru = teachers.first;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Map — Guru Terdekat'),
+        title: const Text("Map — Guru Terdekat"),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 1,
         actions: [
           IconButton(
-            icon: const Icon(Icons.close_rounded),
+            icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
       body: Column(
         children: [
+          // ================= MAP =================
           Expanded(
             flex: 6,
-            child: Container(
-              color: Colors.grey.shade100,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = constraints.maxHeight;
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final w = constraints.maxWidth;
+                final h = constraints.maxHeight;
 
-                  return Stack(
-                    children: [
-                      Positioned.fill(
-                        child: CustomPaint(painter: _MapBackgroundPainter()),
-                      ),
-                      // mock user location (center-ish)
-                      Positioned(
-                        left: w * 0.5 - 14,
-                        top: h * 0.45 - 14,
-                        child: _buildUserDot(),
-                      ),
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(painter: _MapBackgroundPainter()),
+                    ),
 
-                      // markers
-                      for (var t in teachers)
-                        Positioned(
-                          left: (t['x'] as double) * w - 16,
-                          top: (t['y'] as double) * h - 34,
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() => selectedId = t['id']);
-                              // optionally scroll list or animate
-                            },
-                            child: _MapMarker(
-                              label: t['name'],
-                              highlighted: selectedId == t['id'],
-                            ),
-                          ),
-                        ),
+                    // USER LOCATION
+                    Positioned(
+                      left: w * 0.5 - 14,
+                      top: h * 0.45 - 14,
+                      child: _buildUserDot(),
+                    ),
 
-                      // filter/search floating
-                      Positioned(
-                        right: 12,
-                        top: 12,
-                        child: Material(
-                          color: Colors.white,
-                          elevation: 6,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            child: Row(
-                              children: const [
-                                Icon(Icons.filter_list_rounded, size: 18),
-                                SizedBox(width: 8),
-                                Text("Filter"),
-                              ],
-                            ),
-                          ),
-                        ),
+                    // GURU MARKER
+                    Positioned(
+                      left: w * 0.55,
+                      top: h * 0.5,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedGuru = teachers.first;
+                          });
+                        },
+                        child: _MapMarker(label: selectedGuru.nama),
                       ),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
+
           const Divider(height: 1),
+
+          // ================= BOTTOM DETAIL =================
           Expanded(
             flex: 4,
-            child: Container(
-              color: Colors.white,
-              child: Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 10),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // HANDLE
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
-                      itemCount: teachers.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (ctx, i) {
-                        final t = teachers[i];
-                        final isSelected = t['id'] == selectedId;
-                        return ListTile(
-                          onTap: () {
-                            setState(() => selectedId = t['id']);
-                            // In a real map: animate camera to marker
-                          },
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    const Text(
+                      "Guru di Sekitar Kamu",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // CARD DETAIL
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: yellowAcc.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: yellowAcc),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedGuru.nama,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          tileColor: isSelected
-                              ? yellowAcc.withOpacity(0.12)
-                              : Colors.white,
-                          leading: CircleAvatar(
-                            backgroundColor: navy.withOpacity(0.08),
-                            child: const Icon(Icons.person, color: navy),
+
+                          const SizedBox(height: 4),
+
+                          Text(
+                            "${selectedGuru.mapel} • ${selectedGuru.jarakKm} km",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                            ),
                           ),
-                          title: Text("${t['name']} • ${t['subject']}"),
-                          subtitle: Text("Rp ${t['price']}/jam"),
-                          trailing: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: navy,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
+
+                          const SizedBox(height: 8),
+
+                          Text(
+                            "Harga Privat: Rp ${selectedGuru.hargaPerJam}/jam",
+                          ),
+
+                          if (selectedGuru.hargaKelompok != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              "1–5 siswa: Rp ${selectedGuru.hargaKelompok!.harga1_5}/jam",
+                            ),
+                            Text(
+                              "6–10 siswa: Rp ${selectedGuru.hargaKelompok!.harga6_10}/jam",
+                            ),
+                          ],
+
+                          const SizedBox(height: 12),
+
+                          Text(
+                            "⭐ ${selectedGuru.rating} (${selectedGuru.totalUlasan} ulasan)",
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: yellowAcc,
+                                foregroundColor: navy,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        GuruDetailPage(guru: selectedGuru),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                "Detail Guru",
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Booking ${t['name']} (mock)'),
-                                ),
-                              );
-                            },
-                            child: const Text("Pesan"),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -238,38 +264,36 @@ class _MapShellState extends State<MapShell> {
   );
 }
 
+// ================= MARKER =================
 class _MapMarker extends StatelessWidget {
   final String label;
-  final bool highlighted;
-  const _MapMarker({required this.label, this.highlighted = false});
+  const _MapMarker({required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (highlighted)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            margin: const EdgeInsets.only(bottom: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8),
-              ],
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          margin: const EdgeInsets.only(bottom: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8),
+            ],
           ),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
         Container(
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: highlighted ? yellowAcc : Colors.white,
+            color: yellowAcc,
             shape: BoxShape.circle,
-            border: Border.all(color: navy.withOpacity(0.12)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.12),
@@ -278,10 +302,10 @@ class _MapMarker extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(
+          child: const Icon(
             Icons.school_rounded,
             size: 16,
-            color: highlighted ? Colors.white : navy,
+            color: Colors.white,
           ),
         ),
       ],
@@ -289,15 +313,17 @@ class _MapMarker extends StatelessWidget {
   }
 }
 
+// ================= MAP BACKGROUND =================
 class _MapBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.grey.shade200;
-    canvas.drawRect(Offset.zero & size, paint);
+    final bg = Paint()..color = Colors.grey.shade200;
+    canvas.drawRect(Offset.zero & size, bg);
 
     final line = Paint()
       ..color = Colors.grey.shade300
       ..strokeWidth = 1;
+
     const step = 40.0;
     for (double x = 0; x < size.width; x += step) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
