@@ -167,7 +167,9 @@ class _EditPricePageState extends State<EditPricePage> {
                     // price1to5C.text
                     // price6to10C.text
 
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                   },
                   child: const Text(
                     "Ubah",
