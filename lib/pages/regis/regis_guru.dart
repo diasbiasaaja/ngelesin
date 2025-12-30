@@ -16,16 +16,20 @@ class _RegisterGuruState extends State<RegisterGuru> {
   final TextEditingController emailCtrl = TextEditingController();
   final TextEditingController hpCtrl = TextEditingController();
   final TextEditingController alamatCtrl = TextEditingController();
+  final TextEditingController passwordCtrl = TextEditingController();
+  final TextEditingController confirmPasswordCtrl = TextEditingController();
 
   String? pendidikan;
   File? ijazah;
   File? sertifikat;
 
+  bool hidePassword = true;
+  bool hideConfirmPassword = true;
+
   final picker = ImagePicker();
 
   Future pilihFoto(bool isIjazah) async {
     final foto = await picker.pickImage(source: ImageSource.gallery);
-
     if (foto != null) {
       setState(() {
         if (isIjazah) {
@@ -79,18 +83,20 @@ class _RegisterGuruState extends State<RegisterGuru> {
 
                 DropdownButtonFormField(
                   value: pendidikan,
-                  items:
-                      [
-                            "SMA/SMK",
-                            "Diploma",
-                            "Sarjana (S1)",
-                            "Magister (S2)",
-                            "Doktor (S3)",
-                          ]
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
+                  items: [
+                    "SMA/SMK",
+                    "Diploma",
+                    "Sarjana (S1)",
+                    "Magister (S2)",
+                    "Doktor (S3)",
+                  ]
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(e),
+                        ),
+                      )
+                      .toList(),
                   decoration: _inputStyle("Pendidikan Terakhir"),
                   onChanged: (v) => setState(() => pendidikan = v),
                 ),
@@ -98,6 +104,31 @@ class _RegisterGuruState extends State<RegisterGuru> {
                 const SizedBox(height: 15),
 
                 _inputField("Alamat Lengkap", alamatCtrl),
+                const SizedBox(height: 15),
+
+                // PASSWORD
+                _passwordField(
+                  label: "Password",
+                  controller: passwordCtrl,
+                  isHidden: hidePassword,
+                  onToggle: () {
+                    setState(() => hidePassword = !hidePassword);
+                  },
+                ),
+
+                const SizedBox(height: 15),
+
+                // KONFIRMASI PASSWORD
+                _passwordField(
+                  label: "Konfirmasi Password",
+                  controller: confirmPasswordCtrl,
+                  isHidden: hideConfirmPassword,
+                  onToggle: () {
+                    setState(() =>
+                        hideConfirmPassword = !hideConfirmPassword);
+                  },
+                ),
+
                 const SizedBox(height: 30),
 
                 _buttonNavy(
@@ -183,7 +214,31 @@ class _RegisterGuruState extends State<RegisterGuru> {
   }
 
   Widget _inputField(String label, TextEditingController controller) {
-    return TextField(controller: controller, decoration: _inputStyle(label));
+    return TextField(
+      controller: controller,
+      decoration: _inputStyle(label),
+    );
+  }
+
+  Widget _passwordField({
+    required String label,
+    required TextEditingController controller,
+    required bool isHidden,
+    required Function() onToggle,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isHidden,
+      decoration: _inputStyle(label).copyWith(
+        suffixIcon: IconButton(
+          icon: Icon(
+            isHidden ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey,
+          ),
+          onPressed: onToggle,
+        ),
+      ),
+    );
   }
 
   InputDecoration _inputStyle(String label) {
@@ -224,7 +279,8 @@ class _RegisterGuruState extends State<RegisterGuru> {
             ? Center(
                 child: Text(
                   label,
-                  style: const TextStyle(color: Colors.black54, fontSize: 15),
+                  style:
+                      const TextStyle(color: Colors.black54, fontSize: 15),
                 ),
               )
             : ClipRRect(

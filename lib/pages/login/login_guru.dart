@@ -1,7 +1,6 @@
 // lib/login_guru.dart
 import 'package:flutter/material.dart';
 import 'package:ngelesin/pages/regis/regis_guru.dart';
-
 import '../home_guru/home_guru_page.dart';
 
 class LoginGuruPage extends StatefulWidget {
@@ -14,6 +13,8 @@ class LoginGuruPage extends StatefulWidget {
 class _LoginGuruPageState extends State<LoginGuruPage> {
   final TextEditingController emailC = TextEditingController();
   final TextEditingController passC = TextEditingController();
+
+  bool isPasswordHidden = true; // 🔥 NEW
 
   @override
   void dispose() {
@@ -33,7 +34,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Dummy credentials (ubah sesuai kebutuhan)
+    // Dummy credentials
     const dummyEmail = "test@gmail.com";
     const dummyPass = "123456";
 
@@ -44,7 +45,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
           children: [
             const SizedBox(height: 70),
 
-            // LOGO DI LUAR KOTAK
+            // LOGO
             Image.asset("assets/images/logo.png", width: 110),
 
             const SizedBox(height: 10),
@@ -68,19 +69,18 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                  color: const Color(0xFF0A1A44), // navy border
+                  color: Color(0xFF0A1A44),
                   width: 3,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
                     blurRadius: 12,
-                    offset: const Offset(0, 5),
+                    offset: Offset(0, 5),
                   ),
                 ],
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   // EMAIL
                   TextField(
@@ -88,7 +88,6 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: "Email",
-                      labelStyle: const TextStyle(color: Colors.black87),
                       filled: true,
                       fillColor: Colors.grey[200],
                       border: OutlineInputBorder(
@@ -100,15 +99,29 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
                   const SizedBox(height: 20),
 
-                  // PASSWORD
+                  // PASSWORD (SHOW / HIDE)
                   TextField(
                     controller: passC,
-                    obscureText: true,
+                    obscureText: isPasswordHidden,
                     decoration: InputDecoration(
                       labelText: "Password",
-                      labelStyle: const TextStyle(color: Colors.black87),
                       filled: true,
                       fillColor: Colors.grey[200],
+
+                      // 👁️ ICON MATA
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isPasswordHidden
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isPasswordHidden = !isPasswordHidden;
+                          });
+                        },
+                      ),
+
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
@@ -118,7 +131,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
                   const SizedBox(height: 25),
 
-                  // TOMBOL LOGIN
+                  // BUTTON LOGIN
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -134,7 +147,6 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                         if (email == dummyEmail && pass == dummyPass) {
                           _showMsg("Login berhasil 🎉", success: true);
 
-                          // navigasi ke halaman home guru (replace so user can't go back)
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
@@ -168,7 +180,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
             const SizedBox(height: 20),
 
-            // BELUM PUNYA AKUN?
+            // DAFTAR
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

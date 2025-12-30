@@ -13,6 +13,9 @@ class _RegisterMuridState extends State<RegisterMurid> {
   final TextEditingController passCtrl = TextEditingController();
   final TextEditingController pass2Ctrl = TextEditingController();
 
+  bool isPassHidden = true;
+  bool isPass2Hidden = true;
+
   String? pendidikan;
 
   final List<String> pendidikanList = [
@@ -56,10 +59,26 @@ class _RegisterMuridState extends State<RegisterMurid> {
             _inputField("Email", emailCtrl),
             const SizedBox(height: 15),
 
-            _inputField("Password", passCtrl, isPassword: true),
+            // PASSWORD
+            _passwordField(
+              label: "Password",
+              controller: passCtrl,
+              isHidden: isPassHidden,
+              onToggle: () {
+                setState(() => isPassHidden = !isPassHidden);
+              },
+            ),
             const SizedBox(height: 15),
 
-            _inputField("Konfirmasi Password", pass2Ctrl, isPassword: true),
+            // KONFIRMASI PASSWORD
+            _passwordField(
+              label: "Konfirmasi Password",
+              controller: pass2Ctrl,
+              isHidden: isPass2Hidden,
+              onToggle: () {
+                setState(() => isPass2Hidden = !isPass2Hidden);
+              },
+            ),
             const SizedBox(height: 15),
 
             DropdownButtonFormField(
@@ -108,15 +127,30 @@ class _RegisterMuridState extends State<RegisterMurid> {
     );
   }
 
-  Widget _inputField(
-    String label,
-    TextEditingController ctrl, {
-    bool isPassword = false,
-  }) {
+  Widget _inputField(String label, TextEditingController ctrl) {
     return TextField(
       controller: ctrl,
-      obscureText: isPassword,
       decoration: _inputStyle(label),
+    );
+  }
+
+  Widget _passwordField({
+    required String label,
+    required TextEditingController controller,
+    required bool isHidden,
+    required VoidCallback onToggle,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isHidden,
+      decoration: _inputStyle(label).copyWith(
+        suffixIcon: IconButton(
+          icon: Icon(
+            isHidden ? Icons.visibility_off : Icons.visibility,
+          ),
+          onPressed: onToggle,
+        ),
+      ),
     );
   }
 
@@ -125,7 +159,8 @@ class _RegisterMuridState extends State<RegisterMurid> {
       labelText: label,
       filled: true,
       fillColor: Colors.grey[200],
-      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,

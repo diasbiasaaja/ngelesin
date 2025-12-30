@@ -13,6 +13,8 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailC = TextEditingController();
   final TextEditingController passC = TextEditingController();
 
+  bool isPasswordHidden = true;
+
   @override
   void dispose() {
     emailC.dispose();
@@ -62,6 +64,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               child: Column(
                 children: [
+                  // EMAIL
                   TextField(
                     controller: emailC,
                     decoration: InputDecoration(
@@ -77,13 +80,26 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 20),
 
+                  // PASSWORD (SHOW / HIDE)
                   TextField(
                     controller: passC,
-                    obscureText: true,
+                    obscureText: isPasswordHidden,
                     decoration: InputDecoration(
                       labelText: "Password",
                       filled: true,
                       fillColor: Colors.grey[200],
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isPasswordHidden
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isPasswordHidden = !isPasswordHidden;
+                          });
+                        },
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
@@ -93,6 +109,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 30),
 
+                  // BUTTON LOGIN
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -105,27 +122,30 @@ class _LoginPageState extends State<LoginPage> {
 
                         if (email == dummyEmail && pass == dummyPass) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Login Berhasil 🎉")),
+                            const SnackBar(
+                              content: Text("Login Berhasil 🎉"),
+                            ),
                           );
 
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (c) =>
-                                  const HomeSiswaPage(), // <-- PAKAI HOMEPAGE KAMU
+                              builder: (c) => const HomeSiswaPage(),
                             ),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Email atau password salah!"),
+                            const SnackBar(
+                              content:
+                                  Text("Email atau password salah!"),
                             ),
                           );
                         }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFF2C94C),
-                        padding: EdgeInsets.symmetric(vertical: 14),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -146,6 +166,7 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 20),
 
+            // DAFTAR
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -155,10 +176,12 @@ class _LoginPageState extends State<LoginPage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => RegisterMurid()),
+                      MaterialPageRoute(
+                        builder: (context) => const RegisterMurid(),
+                      ),
                     );
                   },
-                  child: Text(
+                  child: const Text(
                     "Daftar",
                     style: TextStyle(
                       color: Color(0xFF0A1A44),
