@@ -14,7 +14,7 @@ class GuruHeader extends StatelessWidget {
         Container(
           padding: EdgeInsets.fromLTRB(
             20,
-            MediaQuery.of(context).padding.top + 16,
+            MediaQuery.of(context).padding.top + 16, // 🔥 AMAN STATUS BAR
             20,
             24,
           ),
@@ -31,18 +31,24 @@ class GuruHeader extends StatelessWidget {
           ),
           child: Row(
             children: [
+              // ================= ICON =================
               CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white,
                 child: Icon(Icons.school, color: navy),
               ),
+
               const SizedBox(width: 14),
-              const Expanded(
+
+              // ================= TITLE & SUBTITLE =================
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: const [
                     Text(
                       "Collage Private - Guru",
+                      maxLines: 1, // 🔥 FIX NUMPUK
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -51,13 +57,22 @@ class GuruHeader extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      "Siap mengajar dan bantu murid berkembang",
+                      "Belajar dengan elegant dan menyenangkan",
+                      maxLines: 1, // 🔥 FIX NUMPUK
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(width: 10),
+
+              // ================= BADGE =================
               Container(
+                constraints: const BoxConstraints(
+                  maxWidth: 120, // 🔥 BIKIN AMAN DI HP KECIL
+                ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 6,
@@ -68,6 +83,8 @@ class GuruHeader extends StatelessWidget {
                 ),
                 child: const Text(
                   "Halo, Guru 👋",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.white),
                 ),
               ),
