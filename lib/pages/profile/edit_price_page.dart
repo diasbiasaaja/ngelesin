@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '/dummy/dummy_user.dart';
+import 'edit_price_page.dart';
 
 const Color navy = Color(0xFF0A2A43);
 const Color yellowAcc = Color(0xFFFFC947);
@@ -87,7 +88,7 @@ class _EditPricePageState extends State<EditPricePage> {
 
             const SizedBox(height: 12),
 
-            // INPUT KELOMPOK (MUNCUL SAAT ON)
+            // INPUT KELOMPOK
             if (isGroupActive) ...[
               _input(label: "Harga 1–5 Orang / sesi", controller: price1to5C),
               _input(label: "Harga 6–10 Orang / sesi", controller: price6to10C),
@@ -115,6 +116,7 @@ class _EditPricePageState extends State<EditPricePage> {
                           ),
                         ),
                         onPressed: () {
+                          // ✅ FIX UTAMA
                           currentUser.hargaPerJam = int.tryParse(
                             singlePriceC.text,
                           );
@@ -122,7 +124,10 @@ class _EditPricePageState extends State<EditPricePage> {
                           // nanti backend:
                           // simpan harga kelompok jika isGroupActive == true
 
-                          Navigator.popUntil(context, (route) => route.isFirst);
+                          Navigator.pop(
+                            context,
+                          ); // ⬅️ keluar dari EditPricePage
+                          Navigator.pop(context);
                         },
                         child: const Text(
                           "Ubah",

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/dummy/dummy_user.dart';
 import '/models/usermodel.dart';
+import 'edit_mapel_ampu.dart';
 import 'edit_price_page.dart';
 
 const Color navy = Color(0xFF0A2A43);
@@ -135,7 +136,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const EditPricePage(),
+                                builder: (_) => const EditProfileGuruPage(),
                               ),
                             );
                           } else {
