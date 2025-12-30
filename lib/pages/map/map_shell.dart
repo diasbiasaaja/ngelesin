@@ -228,7 +228,7 @@ class _MapShellState extends State<MapShell> {
                                 );
                               },
                               child: const Text(
-                                "Detail Guru",
+                                "Detail Guru__",
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
