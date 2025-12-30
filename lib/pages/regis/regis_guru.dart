@@ -83,20 +83,18 @@ class _RegisterGuruState extends State<RegisterGuru> {
 
                 DropdownButtonFormField(
                   value: pendidikan,
-                  items: [
-                    "SMA/SMK",
-                    "Diploma",
-                    "Sarjana (S1)",
-                    "Magister (S2)",
-                    "Doktor (S3)",
-                  ]
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e),
-                        ),
-                      )
-                      .toList(),
+                  items:
+                      [
+                            "SMA/SMK",
+                            "Diploma",
+                            "Sarjana (S1)",
+                            "Magister (S2)",
+                            "Doktor (S3)",
+                          ]
+                          .map(
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
+                          )
+                          .toList(),
                   decoration: _inputStyle("Pendidikan Terakhir"),
                   onChanged: (v) => setState(() => pendidikan = v),
                 ),
@@ -124,8 +122,7 @@ class _RegisterGuruState extends State<RegisterGuru> {
                   controller: confirmPasswordCtrl,
                   isHidden: hideConfirmPassword,
                   onToggle: () {
-                    setState(() =>
-                        hideConfirmPassword = !hideConfirmPassword);
+                    setState(() => hideConfirmPassword = !hideConfirmPassword);
                   },
                 ),
 
@@ -214,10 +211,7 @@ class _RegisterGuruState extends State<RegisterGuru> {
   }
 
   Widget _inputField(String label, TextEditingController controller) {
-    return TextField(
-      controller: controller,
-      decoration: _inputStyle(label),
-    );
+    return TextField(controller: controller, decoration: _inputStyle(label));
   }
 
   Widget _passwordField({
@@ -279,8 +273,7 @@ class _RegisterGuruState extends State<RegisterGuru> {
             ? Center(
                 child: Text(
                   label,
-                  style:
-                      const TextStyle(color: Colors.black54, fontSize: 15),
+                  style: const TextStyle(color: Colors.black54, fontSize: 15),
                 ),
               )
             : ClipRRect(
@@ -298,6 +291,7 @@ class _RegisterGuruState extends State<RegisterGuru> {
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF0A1A44),
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
