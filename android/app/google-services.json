@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "405437331830",
+    "project_id": "ngelesin",
+    "storage_bucket": "ngelesin.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:405437331830:android:f594e695d0bc865620e257",
+        "android_client_info": {
+          "package_name": "com.example.ngelesin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChFDoHdPs7FcAa4XHXOcOxh-b1rthEM1A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

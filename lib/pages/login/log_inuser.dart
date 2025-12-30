@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../regis/regis_user.dart';
 import '../home_siswa/home_siswa_page.dart';
 
@@ -14,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passC = TextEditingController();
 
   bool isPasswordHidden = true;
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -22,6 +25,56 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  // ================= LOGIN FUNCTION =================
+  Future<void> loginSiswa() async {
+    if (emailC.text.isEmpty || passC.text.isEmpty) {
+      _showMessage("Email dan password wajib diisi");
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailC.text.trim(),
+        password: passC.text.trim(),
+      );
+
+      setState(() => isLoading = false);
+
+      if (!mounted) return;
+
+      _showMessage("Login berhasil 🎉");
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HomeSiswaPage(),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      setState(() => isLoading = false);
+
+      String msg = "Login gagal";
+
+      if (e.code == 'user-not-found') {
+        msg = "Email belum terdaftar";
+      } else if (e.code == 'wrong-password') {
+        msg = "Password salah";
+      } else if (e.code == 'invalid-email') {
+        msg = "Format email tidak valid";
+      }
+
+      _showMessage(msg);
+    }
+  }
+
+  void _showMessage(String msg) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 20),
 
-                  // PASSWORD (SHOW / HIDE)
+                  // PASSWORD
                   TextField(
                     controller: passC,
                     obscureText: isPasswordHidden,
@@ -113,46 +166,17 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        String email = emailC.text.trim();
-                        String pass = passC.text.trim();
-
-                        const dummyEmail = "test@gmail.com";
-                        const dummyPass = "123456";
-
-                        if (email == dummyEmail && pass == dummyPass) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Login Berhasil 🎉"),
-                            ),
-                          );
-
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (c) => const HomeSiswaPage(),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text("Email atau password salah!"),
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: isLoading ? null : loginSiswa,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFF2C94C),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: const Color(0xFFF2C94C),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        "LOGIN",
-                        style: TextStyle(
+                      child: Text(
+                        isLoading ? "Loading..." : "LOGIN",
+                        style: const TextStyle(
                           color: Colors.black,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -177,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const RegisterMurid(),
+                        builder: (_) => const RegisterMurid(),
                       ),
                     );
                   },

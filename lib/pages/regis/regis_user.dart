@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ngelesin/pages/login/log_inuser.dart';
 
 class RegisterMurid extends StatefulWidget {
   const RegisterMurid({super.key});
@@ -15,6 +18,7 @@ class _RegisterMuridState extends State<RegisterMurid> {
 
   bool isPassHidden = true;
   bool isPass2Hidden = true;
+  bool isLoading = false;
 
   String? pendidikan;
 
@@ -26,11 +30,91 @@ class _RegisterMuridState extends State<RegisterMurid> {
     "Lainnya",
   ];
 
+  // ======================== REGISTER FUNCTION =========================
+  Future<void> daftarMurid() async {
+    // VALIDASI
+    if (namaCtrl.text.isEmpty ||
+        emailCtrl.text.isEmpty ||
+        passCtrl.text.isEmpty ||
+        pass2Ctrl.text.isEmpty ||
+        pendidikan == null) {
+      _showMessage("Semua field wajib diisi");
+      return;
+    }
+
+    if (passCtrl.text.length < 6) {
+      _showMessage("Password minimal 6 karakter");
+      return;
+    }
+
+    if (passCtrl.text != pass2Ctrl.text) {
+      _showMessage("Password tidak sama");
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      // FIREBASE AUTH
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailCtrl.text.trim(),
+        password: passCtrl.text.trim(),
+      );
+
+      // UPDATE NAMA
+      await userCredential.user!
+          .updateDisplayName(namaCtrl.text.trim());
+
+      // FIRESTORE
+      await FirebaseFirestore.instance
+          .collection('murid')
+          .doc(userCredential.user!.uid)
+          .set({
+        'uid': userCredential.user!.uid,
+        'nama': namaCtrl.text.trim(),
+        'email': emailCtrl.text.trim(),
+        'pendidikan': pendidikan,
+        'createdAt': Timestamp.now(),
+      });
+
+      _showMessage("Pendaftaran berhasil");
+
+      // ⬅⬅⬅ FIX UTAMA: MATIKAN LOADING DULU
+      setState(() => isLoading = false);
+
+      if (!mounted) return;
+
+      // LANGSUNG KE LOGIN
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      setState(() => isLoading = false);
+
+      String msg = "Terjadi kesalahan";
+      if (e.code == 'email-already-in-use') {
+        msg = "Email sudah terdaftar";
+      } else if (e.code == 'invalid-email') {
+        msg = "Email tidak valid";
+      }
+
+      _showMessage(msg);
+    }
+  }
+
+  void _showMessage(String msg) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ======================== UI =========================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
@@ -44,7 +128,6 @@ class _RegisterMuridState extends State<RegisterMurid> {
         ),
         centerTitle: true,
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(22),
         child: Column(
@@ -59,25 +142,21 @@ class _RegisterMuridState extends State<RegisterMurid> {
             _inputField("Email", emailCtrl),
             const SizedBox(height: 15),
 
-            // PASSWORD
             _passwordField(
               label: "Password",
               controller: passCtrl,
               isHidden: isPassHidden,
-              onToggle: () {
-                setState(() => isPassHidden = !isPassHidden);
-              },
+              onToggle: () =>
+                  setState(() => isPassHidden = !isPassHidden),
             ),
             const SizedBox(height: 15),
 
-            // KONFIRMASI PASSWORD
             _passwordField(
               label: "Konfirmasi Password",
               controller: pass2Ctrl,
               isHidden: isPass2Hidden,
-              onToggle: () {
-                setState(() => isPass2Hidden = !isPass2Hidden);
-              },
+              onToggle: () =>
+                  setState(() => isPass2Hidden = !isPass2Hidden),
             ),
             const SizedBox(height: 15),
 
@@ -92,13 +171,21 @@ class _RegisterMuridState extends State<RegisterMurid> {
 
             const SizedBox(height: 30),
 
-            _buttonYellow(text: "Daftar", onPressed: () {}),
+            _buttonYellow(
+              text: isLoading ? "Loading..." : "Daftar",
+              onPressed: isLoading ? () {} : daftarMurid,
+            ),
 
             const SizedBox(height: 15),
 
             Center(
               child: TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                  );
+                },
                 child: const Text(
                   "← Kembali ke Login",
                   style: TextStyle(
@@ -114,8 +201,7 @@ class _RegisterMuridState extends State<RegisterMurid> {
     );
   }
 
-  // ======================== UI COMPONENTS =========================
-
+  // ======================== COMPONENTS =========================
   Widget _title(String text) {
     return Text(
       text,
@@ -145,9 +231,7 @@ class _RegisterMuridState extends State<RegisterMurid> {
       obscureText: isHidden,
       decoration: _inputStyle(label).copyWith(
         suffixIcon: IconButton(
-          icon: Icon(
-            isHidden ? Icons.visibility_off : Icons.visibility,
-          ),
+          icon: Icon(isHidden ? Icons.visibility_off : Icons.visibility),
           onPressed: onToggle,
         ),
       ),
@@ -172,7 +256,7 @@ class _RegisterMuridState extends State<RegisterMurid> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: () => onPressed(),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFF2C94C),
           padding: const EdgeInsets.symmetric(vertical: 16),
