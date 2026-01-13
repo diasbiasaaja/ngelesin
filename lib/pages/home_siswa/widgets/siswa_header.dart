@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
 
-class siswaHeader extends StatelessWidget {
-  const siswaHeader({super.key});
+class SiswaHeader extends StatelessWidget {
+  const SiswaHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +14,7 @@ class siswaHeader extends StatelessWidget {
         Container(
           padding: EdgeInsets.fromLTRB(
             20,
-            MediaQuery.of(context).padding.top + 16, // 🔥 FIX DI SINI
+            MediaQuery.of(context).padding.top + 16, // 🔥 AMAN STATUS BAR
             20,
             24,
           ),
@@ -31,18 +31,24 @@ class siswaHeader extends StatelessWidget {
           ),
           child: Row(
             children: [
+              // ================= ICON =================
               CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white,
                 child: Icon(Icons.school, color: navy),
               ),
+
               const SizedBox(width: 14),
-              const Expanded(
+
+              // ================= TITLE & SUBTITLE =================
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: const [
                     Text(
                       "Collage Private - Siswa",
+                      maxLines: 1, // 🔥 FIX NUMPUK
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -52,12 +58,21 @@ class siswaHeader extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       "Belajar dengan elegant dan menyenangkan",
+                      maxLines: 1, // 🔥 FIX NUMPUK
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(width: 10),
+
+              // ================= BADGE =================
               Container(
+                constraints: const BoxConstraints(
+                  maxWidth: 120, // 🔥 BIKIN AMAN DI HP KECIL
+                ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 6,
@@ -68,6 +83,8 @@ class siswaHeader extends StatelessWidget {
                 ),
                 child: const Text(
                   "Halo, Siswa/i 👋",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.white),
                 ),
               ),

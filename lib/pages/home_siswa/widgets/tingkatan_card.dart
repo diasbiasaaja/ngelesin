@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 
-// warna samakan dengan tema kamu
 const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
 
 class TingkatanCard extends StatefulWidget {
   final String title;
   final List<Map<String, dynamic>> subjects;
+  final Set<String> selectedSubjects;
   final Function(String subject)? onSubjectTap;
+  final VoidCallback? onSelectAll;
 
   const TingkatanCard({
     super.key,
     required this.title,
     required this.subjects,
+    required this.selectedSubjects,
     this.onSubjectTap,
+    this.onSelectAll,
   });
 
   @override
@@ -27,7 +30,7 @@ class _TingkatanCardState extends State<TingkatanCard> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // ================= RESPONSIVE SIZE =================
+    // ================= RESPONSIVE SIZE (BALIK KE PUNYA KAMU) =================
     double circleSize = 64;
     double iconSize = 28;
     double fontSize = 12;
@@ -63,31 +66,43 @@ class _TingkatanCardState extends State<TingkatanCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: navy,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            width: 60,
-            height: 3,
-            decoration: BoxDecoration(
-              color: yellowAcc,
-              borderRadius: BorderRadius.circular(20),
-            ),
+          // ================= HEADER =================
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: navy,
+                ),
+              ),
+
+              // 🔥 PILIH SEMUA PER JENJANG
+              if (widget.onSelectAll != null)
+                GestureDetector(
+                  onTap: widget.onSelectAll,
+                  child: const Text(
+                    "Pilih Semua",
+                    style: TextStyle(
+                      color: yellowAcc,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
           ),
 
           const SizedBox(height: 20),
 
-          // ================= SUBJECT GRID =================
+          // ================= MAPEL =================
           Wrap(
             spacing: 20,
             runSpacing: 18,
             children: visibleSubjects.map((item) {
+              final isSelected = widget.selectedSubjects.contains(item["name"]);
+
               return GestureDetector(
                 onTap: () {
                   if (widget.onSubjectTap != null) {
@@ -101,19 +116,16 @@ class _TingkatanCardState extends State<TingkatanCard> {
                       height: circleSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
+                        color: isSelected ? yellowAcc : Colors.white,
                         border: Border.all(
-                          color: navy.withOpacity(0.1),
-                          width: 1,
+                          color: isSelected ? yellowAcc : navy.withOpacity(0.2),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                            color: Colors.black.withOpacity(0.06),
-                          ),
-                        ],
                       ),
-                      child: Icon(item["icon"], size: iconSize, color: navy),
+                      child: Icon(
+                        item["icon"],
+                        size: iconSize,
+                        color: isSelected ? Colors.white : navy,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
@@ -122,9 +134,9 @@ class _TingkatanCardState extends State<TingkatanCard> {
                         item["name"],
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: navy,
                           fontSize: fontSize,
                           fontWeight: FontWeight.w600,
+                          color: isSelected ? yellowAcc : navy,
                         ),
                       ),
                     ),
@@ -140,21 +152,11 @@ class _TingkatanCardState extends State<TingkatanCard> {
           Center(
             child: GestureDetector(
               onTap: () => setState(() => expanded = !expanded),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: yellowAcc.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  expanded ? "Lihat Lebih Sedikit" : "Lihat Semua",
-                  style: const TextStyle(
-                    color: yellowAcc,
-                    fontWeight: FontWeight.bold,
-                  ),
+              child: Text(
+                expanded ? "Lihat Lebih Sedikit" : "Lihat Semua",
+                style: const TextStyle(
+                  color: yellowAcc,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),

@@ -51,7 +51,7 @@ class HomeSiswaContent extends StatelessWidget {
         child: Column(
           children: [
             // ================= HEADER =================
-            const siswaHeader(),
+            const SiswaHeader(),
 
             // garis kuning
             Container(height: 4, color: Colors.amber),
@@ -88,6 +88,7 @@ class HomeSiswaContent extends StatelessWidget {
                   ),
                 );
               },
+              selectedSubjects: const {},
             ),
 
             TingkatanCard(
@@ -112,6 +113,8 @@ class HomeSiswaContent extends StatelessWidget {
                   ),
                 );
               },
+
+              selectedSubjects: const {},
             ),
 
             TingkatanCard(
@@ -141,6 +144,7 @@ class HomeSiswaContent extends StatelessWidget {
                   ),
                 );
               },
+              selectedSubjects: const {},
             ),
 
             const SizedBox(height: 16),

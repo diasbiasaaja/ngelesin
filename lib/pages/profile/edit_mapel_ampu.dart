@@ -12,106 +12,122 @@ class EditProfileGuruPage extends StatefulWidget {
 }
 
 class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
-  /// 🔥 MAPEL TERPILIH (BISA BANYAK)
-  final Set<String> selectedMapel = {};
+  // ================= STATE PER JENJANG =================
+  final Set<String> selectedSD = {};
+  final Set<String> selectedSMP = {};
+  final Set<String> selectedSMA = {};
 
-  void toggleMapel(String mapel) {
+  // ================= DATA =================
+  final sdSubjects = const [
+    {"icon": Icons.calculate_rounded, "name": "Matematika"},
+    {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
+    {"icon": Icons.science_rounded, "name": "IPA"},
+    {"icon": Icons.public_rounded, "name": "IPS"},
+    {"icon": Icons.flag_rounded, "name": "PPKn"},
+    {"icon": Icons.mosque_rounded, "name": "PAI"},
+    {"icon": Icons.sports_soccer_rounded, "name": "PJOK"},
+    {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
+    {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
+  ];
+
+  final smpSubjects = const [
+    {"icon": Icons.calculate_rounded, "name": "Matematika"},
+    {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
+    {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
+    {"icon": Icons.science_rounded, "name": "IPA"},
+    {"icon": Icons.public_rounded, "name": "IPS"},
+    {"icon": Icons.flag_rounded, "name": "PPKn"},
+    {"icon": Icons.mosque_rounded, "name": "PAI"},
+    {"icon": Icons.sports_basketball_rounded, "name": "PJOK"},
+    {"icon": Icons.computer_rounded, "name": "Informatika"},
+    {"icon": Icons.brush_rounded, "name": "Seni Budaya"},
+  ];
+
+  final smaSubjects = const [
+    {"icon": Icons.calculate_rounded, "name": "Matematika"},
+    {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
+    {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
+    {"icon": Icons.history_edu_rounded, "name": "Sejarah"},
+    {"icon": Icons.flag_rounded, "name": "PPKn"},
+    {"icon": Icons.mosque_rounded, "name": "Agama"},
+    {"icon": Icons.science_rounded, "name": "Fisika"},
+    {"icon": Icons.bubble_chart_rounded, "name": "Kimia"},
+    {"icon": Icons.biotech_rounded, "name": "Biologi"},
+    {"icon": Icons.public_rounded, "name": "Geografi"},
+    {"icon": Icons.groups_rounded, "name": "Sosiologi"},
+    {"icon": Icons.attach_money_rounded, "name": "Ekonomi"},
+    {"icon": Icons.computer_rounded, "name": "Informatika"},
+    {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
+    {"icon": Icons.sports_martial_arts_rounded, "name": "PJOK"},
+  ];
+
+  // ================= LOGIC =================
+  void toggle(Set<String> selected, String mapel) {
     setState(() {
-      if (selectedMapel.contains(mapel)) {
-        selectedMapel.remove(mapel);
-      } else {
-        selectedMapel.add(mapel);
+      selected.contains(mapel) ? selected.remove(mapel) : selected.add(mapel);
+    });
+  }
+
+  void selectAll(Set<String> selected, List<Map<String, dynamic>> subjects) {
+    setState(() {
+      for (final item in subjects) {
+        selected.add(item["name"]);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final circleSize = width < 360
+        ? 56.0
+        : width > 600
+        ? 72.0
+        : 64.0;
+    final iconSize = width < 360
+        ? 24.0
+        : width > 600
+        ? 32.0
+        : 28.0;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Mapel yang Diampu"),
-        centerTitle: true,
+        title: const Text("Edit Mapel Ampu"),
+        foregroundColor: navy,
         backgroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: navy,
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Pilih Mata Pelajaran",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: navy,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ================= SD =================
-            _tingkatanCard(
+            _section(
               title: "SD",
-              subjects: const [
-                {"icon": Icons.calculate_rounded, "name": "Matematika"},
-                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
-                {"icon": Icons.science_rounded, "name": "IPA"},
-                {"icon": Icons.public_rounded, "name": "IPS"},
-                {"icon": Icons.flag_rounded, "name": "PPKn"},
-                {"icon": Icons.mosque_rounded, "name": "PAI / Agama"},
-                {"icon": Icons.sports_soccer_rounded, "name": "PJOK"},
-                {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
-                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
-              ],
+              subjects: sdSubjects,
+              selected: selectedSD,
+              circleSize: circleSize,
+              iconSize: iconSize,
             ),
-
-            // ================= SMP =================
-            _tingkatanCard(
+            _section(
               title: "SMP",
-              subjects: const [
-                {"icon": Icons.calculate_rounded, "name": "Matematika"},
-                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
-                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
-                {"icon": Icons.science_rounded, "name": "IPA"},
-                {"icon": Icons.public_rounded, "name": "IPS"},
-                {"icon": Icons.flag_rounded, "name": "PPKn"},
-                {"icon": Icons.mosque_rounded, "name": "PAI / Agama"},
-                {"icon": Icons.sports_basketball_rounded, "name": "PJOK"},
-                {"icon": Icons.computer_rounded, "name": "Informatika"},
-                {"icon": Icons.brush_rounded, "name": "Seni Budaya"},
-              ],
+              subjects: smpSubjects,
+              selected: selectedSMP,
+              circleSize: circleSize,
+              iconSize: iconSize,
             ),
-
-            // ================= SMA =================
-            _tingkatanCard(
+            _section(
               title: "SMA",
-              subjects: const [
-                {"icon": Icons.calculate_rounded, "name": "Matematika"},
-                {"icon": Icons.menu_book_rounded, "name": "Bahasa Indonesia"},
-                {"icon": Icons.language_rounded, "name": "Bahasa Inggris"},
-                {"icon": Icons.history_edu_rounded, "name": "Sejarah"},
-                {"icon": Icons.flag_rounded, "name": "PPKn"},
-                {"icon": Icons.mosque_rounded, "name": "Agama"},
-                {"icon": Icons.science_rounded, "name": "Fisika"},
-                {"icon": Icons.bubble_chart_rounded, "name": "Kimia"},
-                {"icon": Icons.biotech_rounded, "name": "Biologi"},
-                {"icon": Icons.public_rounded, "name": "Geografi"},
-                {"icon": Icons.groups_rounded, "name": "Sosiologi"},
-                {"icon": Icons.attach_money_rounded, "name": "Ekonomi"},
-                {"icon": Icons.computer_rounded, "name": "Informatika"},
-                {"icon": Icons.palette_rounded, "name": "Seni Budaya"},
-                {"icon": Icons.sports_martial_arts_rounded, "name": "PJOK"},
-              ],
+              subjects: smaSubjects,
+              selected: selectedSMA,
+              circleSize: circleSize,
+              iconSize: iconSize,
             ),
           ],
         ),
       ),
 
-      // ================= SIMPAN =================
+      // ================= TOMBOL LANJUT =================
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -124,18 +140,26 @@ class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: selectedMapel.isEmpty
+            onPressed:
+                (selectedSD.isEmpty &&
+                    selectedSMP.isEmpty &&
+                    selectedSMA.isEmpty)
                 ? null
                 : () {
-                    debugPrint("Mapel dipilih: $selectedMapel");
-
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const EditPricePage()),
+                      MaterialPageRoute(
+                        builder: (_) => EditPricePage(
+                          sdMapel: selectedSD,
+                          smpMapel: selectedSMP,
+                          smaMapel: selectedSMA,
+                        ),
+                      ),
                     );
                   },
+
             child: const Text(
-              "Lanjut Atur Harga",
+              "Lanjut",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -144,73 +168,89 @@ class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
     );
   }
 
-  // ================= TINGKATAN CARD =================
-  Widget _tingkatanCard({
+  // ================= SECTION =================
+  Widget _section({
     required String title,
     required List<Map<String, dynamic>> subjects,
+    required Set<String> selected,
+    required double circleSize,
+    required double iconSize,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 14),
-      padding: const EdgeInsets.all(22),
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
-          BoxShadow(
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-            color: Colors.black.withOpacity(0.06),
-          ),
+          BoxShadow(blurRadius: 12, color: Colors.black.withOpacity(0.06)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: navy,
-            ),
+          // HEADER
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: navy,
+                ),
+              ),
+              TextButton(
+                onPressed: () => selectAll(selected, subjects),
+                child: const Text(
+                  "Pilih Semua",
+                  style: TextStyle(color: yellowAcc),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
+          // ICON GRID
           Wrap(
-            spacing: 22,
+            spacing: 20,
             runSpacing: 20,
             children: subjects.map((item) {
-              final isSelected = selectedMapel.contains(item["name"]);
+              final isSelected = selected.contains(item["name"]);
 
               return GestureDetector(
-                onTap: () => toggleMapel(item["name"]),
+                onTap: () => toggle(selected, item["name"]),
                 child: Column(
                   children: [
                     Container(
-                      width: 70,
-                      height: 70,
+                      width: circleSize,
+                      height: circleSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isSelected ? yellowAcc : Colors.white,
                         border: Border.all(
-                          color: isSelected ? yellowAcc : navy.withOpacity(0.2),
+                          color: isSelected
+                              ? yellowAcc
+                              : navy.withOpacity(0.25),
                         ),
                       ),
                       child: Icon(
                         item["icon"],
-                        size: 30,
+                        size: iconSize,
                         color: isSelected ? Colors.white : navy,
                       ),
                     ),
                     const SizedBox(height: 6),
                     SizedBox(
-                      width: 90,
+                      width: circleSize + 8,
                       child: Text(
                         item["name"],
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
+                          color: isSelected ? yellowAcc : navy,
                         ),
                       ),
                     ),
