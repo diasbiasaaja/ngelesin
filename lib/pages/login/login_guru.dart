@@ -1,5 +1,7 @@
-// lib/login_guru.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:ngelesin/pages/regis/regis_guru.dart';
 import '../home_guru/home_guru_page.dart';
 
@@ -14,7 +16,8 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
   final TextEditingController emailC = TextEditingController();
   final TextEditingController passC = TextEditingController();
 
-  bool isPasswordHidden = true; // 🔥 NEW
+  bool isPasswordHidden = true;
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -27,17 +30,70 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
-        backgroundColor: success ? Colors.green.shade600 : null,
+        backgroundColor: success ? Colors.green : null,
       ),
     );
   }
 
+  // ================= LOGIN GURU (FIREBASE) =================
+  Future<void> loginGuru() async {
+    final email = emailC.text.trim();
+    final pass = passC.text.trim();
+
+    if (email.isEmpty || pass.isEmpty) {
+      _showMsg("Email dan password harus diisi!");
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      // 1️⃣ LOGIN FIREBASE AUTH
+      UserCredential userCred =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: pass,
+      );
+
+      // 2️⃣ CEK DATA GURU DI FIRESTORE
+      final doc = await FirebaseFirestore.instance
+          .collection("guru")
+          .doc(userCred.user!.uid)
+          .get();
+
+      if (!doc.exists) {
+        await FirebaseAuth.instance.signOut();
+        throw Exception("Akun ini bukan guru");
+      }
+
+      _showMsg("Login berhasil 🎉", success: true);
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HomeGuruPage(),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      String msg = "Login gagal";
+
+      if (e.code == 'user-not-found') {
+        msg = "Email belum terdaftar";
+      } else if (e.code == 'wrong-password') {
+        msg = "Password salah";
+      }
+
+      _showMsg(msg);
+    } catch (e) {
+      _showMsg("Login gagal");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    // Dummy credentials
-    const dummyEmail = "test@gmail.com";
-    const dummyPass = "123456";
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -45,9 +101,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
           children: [
             const SizedBox(height: 70),
 
-            // LOGO
             Image.asset("assets/images/logo.png", width: 110),
-
             const SizedBox(height: 10),
 
             const Text(
@@ -61,17 +115,13 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
             const SizedBox(height: 35),
 
-            // ================= KOTAK LOGIN =================
             Container(
               width: 330,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 35),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: Color(0xFF0A1A44),
-                  width: 3,
-                ),
+                border: Border.all(color: Color(0xFF0A1A44), width: 3),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
@@ -99,7 +149,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
                   const SizedBox(height: 20),
 
-                  // PASSWORD (SHOW / HIDE)
+                  // PASSWORD
                   TextField(
                     controller: passC,
                     obscureText: isPasswordHidden,
@@ -107,8 +157,6 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                       labelText: "Password",
                       filled: true,
                       fillColor: Colors.grey[200],
-
-                      // 👁️ ICON MATA
                       suffixIcon: IconButton(
                         icon: Icon(
                           isPasswordHidden
@@ -121,7 +169,6 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                           });
                         },
                       ),
-
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
@@ -135,28 +182,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        final email = emailC.text.trim();
-                        final pass = passC.text.trim();
-
-                        if (email.isEmpty || pass.isEmpty) {
-                          _showMsg("Email dan password harus diisi!");
-                          return;
-                        }
-
-                        if (email == dummyEmail && pass == dummyPass) {
-                          _showMsg("Login berhasil 🎉", success: true);
-
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (c) => const HomeGuruPage(),
-                            ),
-                          );
-                        } else {
-                          _showMsg("Email atau password salah!");
-                        }
-                      },
+                      onPressed: isLoading ? null : loginGuru,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF2C94C),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -164,9 +190,9 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        "LOGIN",
-                        style: TextStyle(
+                      child: Text(
+                        isLoading ? "Loading..." : "LOGIN",
+                        style: const TextStyle(
                           color: Colors.black,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -180,7 +206,6 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
             const SizedBox(height: 20),
 
-            // DAFTAR
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -191,7 +216,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const RegisterGuru(),
+                        builder: (_) => const RegisterGuru(),
                       ),
                     );
                   },
