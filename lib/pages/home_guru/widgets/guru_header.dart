@@ -4,7 +4,12 @@ const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
 
 class GuruHeader extends StatelessWidget {
-  const GuruHeader({super.key});
+  final String namaGuru; // 🔥 TAMBAHAN SAJA
+
+  const GuruHeader({
+    super.key,
+    required this.namaGuru,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +52,7 @@ class GuruHeader extends StatelessWidget {
                   children: const [
                     Text(
                       "Collage Private - Guru",
-                      maxLines: 1, // 🔥 FIX NUMPUK
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
@@ -58,7 +63,7 @@ class GuruHeader extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       "Belajar dengan elegant dan menyenangkan",
-                      maxLines: 1, // 🔥 FIX NUMPUK
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
@@ -71,7 +76,7 @@ class GuruHeader extends StatelessWidget {
               // ================= BADGE =================
               Container(
                 constraints: const BoxConstraints(
-                  maxWidth: 120, // 🔥 BIKIN AMAN DI HP KECIL
+                  maxWidth: 120,
                 ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -81,11 +86,11 @@ class GuruHeader extends StatelessWidget {
                   color: Colors.white24,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Text(
-                  "Halo, Guru 👋",
+                child: Text(
+                  "Halo, $namaGuru 👋", // 🔥 DINAMIS
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
             ],

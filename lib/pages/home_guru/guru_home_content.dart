@@ -1,89 +1,93 @@
 import 'package:flutter/material.dart';
-
-import '../../models/teaching_request.dart';
-import '../detail/detail_siswa.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'widgets/guru_header.dart';
 import 'widgets/summary_row.dart';
 import 'widgets/availability_card.dart';
 import 'widgets/search_bar.dart';
 import 'widgets/section_header.dart';
-import 'widgets/request_tile.dart';
+import 'widgets/request_list.dart';
 
 class GuruHomeContent extends StatelessWidget {
-  const GuruHomeContent({super.key});
+  final String namaGuru;
+
+  const GuruHomeContent({
+    super.key,
+    required this.namaGuru,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
     final bottomPadding =
-        MediaQuery.of(context).padding.bottom + kBottomNavigationBarHeight + 90;
-
-    // ================= DUMMY REQUEST =================
-    final rudiRequest = TeachingRequest(
-      namaSiswa: "Ananda Rudi",
-      mapel: "Matematika",
-      alamat: "Jakarta Barat",
-      jarak: "2 km",
-      harga: 85000,
-      jumlahSiswa: 1,
-      tanggal: DateTime.now(),
-
-      // 🔥 TAMBAHAN PENTING
-      jamMulai: const TimeOfDay(hour: 12, minute: 0),
-      jamSelesai: const TimeOfDay(hour: 15, minute: 0),
-
-      fotoUrl: "",
-    );
+        MediaQuery.of(context).padding.bottom +
+            kBottomNavigationBarHeight +
+            90;
 
     return SafeArea(
       bottom: false,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: bottomPadding),
-        child: Column(
-          children: [
-            const GuruHeader(),
-            const SizedBox(height: 16),
-            const SummaryRow(),
-            const SizedBox(height: 16),
-            const AvailabilityCard(),
-            const SizedBox(height: 16),
-            const GuruSearchInput(),
-            const SizedBox(height: 16),
+      child: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('guru')
+            .doc(uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SectionHeader(
-              title: "Permintaan Mengajar",
-              subtitle: "",
-              roleLabel: "Guru",
+          if (!snapshot.hasData || snapshot.data!.data() == null) {
+            return const Center(child: Text("Data guru tidak ditemukan"));
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+
+          final saldo = data['saldo'] ?? 0;
+          final sesiHariIni = data['sesi_hari_ini'] ?? 0;
+          final requestCount = data['request_count'] ?? 0;
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.only(bottom: bottomPadding),
+            child: Column(
+              children: [
+                // ================= HEADER =================
+                GuruHeader(namaGuru: namaGuru),
+                const SizedBox(height: 16),
+
+                // ================= SUMMARY =================
+                SummaryRow(
+                  saldo: saldo,
+                  sesiHariIni: sesiHariIni,
+                  requestCount: requestCount,
+                ),
+
+                const SizedBox(height: 16),
+
+                // ================= AVAILABILITY =================
+                const AvailabilityCard(),
+                const SizedBox(height: 16),
+
+                // ================= SEARCH =================
+                const GuruSearchInput(),
+                const SizedBox(height: 16),
+
+                // ================= SECTION =================
+                const SectionHeader(
+                  title: "Permintaan Mengajar",
+                  subtitle: "",
+                  roleLabel: "Guru",
+                ),
+
+                // ================= REQUEST LIST (FIRESTORE) =================
+                const RequestList(),
+
+                const SizedBox(height: 24),
+              ],
             ),
-
-            // ================= REQUEST TILE =================
-            RequestTile(
-              title: "Les Matematika - Ananda Rudi",
-              subtitle: "Jakarta Barat • 2 km",
-              price: "Rp 85.000 / sesi",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DetailSiswaPage(
-                      request: rudiRequest,
-                      showAcceptButton: true,
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            RequestTile(
-              title: "Les IPA - Siti",
-              subtitle: "Depok • 4.1 km",
-              price: "Rp 75.000 / sesi",
-              onTap: () {},
-            ),
-
-            const SizedBox(height: 24),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

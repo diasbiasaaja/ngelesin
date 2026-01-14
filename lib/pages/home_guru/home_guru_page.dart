@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'widgets/custom_navbar.dart';
 
 import 'guru_home_content.dart';
@@ -21,15 +24,49 @@ class HomeGuruPage extends StatefulWidget {
 class _HomeGuruPageState extends State<HomeGuruPage> {
   int selectedIndex = 0;
 
-  final pages = const [
-    GuruHomeContent(),
-    JadwalPage(),
-    ChatListPage(),
-    ProfilePage(),
-  ];
+  String? namaGuru;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGuru();
+  }
+
+  // ================= LOAD DATA GURU =================
+  Future<void> _loadGuru() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('guru')
+        .doc(user.uid)
+        .get();
+
+    if (doc.exists) {
+      setState(() {
+        namaGuru = doc['nama'];
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final pages = [
+      GuruHomeContent(namaGuru: namaGuru!), // 🔥 KIRIM NAMA GURU
+      const JadwalPage(),
+      const ChatListPage(),
+      const ProfilePage(),
+    ];
+
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.white,
@@ -37,10 +74,7 @@ class _HomeGuruPageState extends State<HomeGuruPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: yellowAcc,
         elevation: 10,
-
-        // 🔑 INI YANG NGUNCI BULAT SEMPURNA
         shape: const CircleBorder(),
-
         onPressed: () {
           Navigator.push(
             context,
@@ -48,7 +82,7 @@ class _HomeGuruPageState extends State<HomeGuruPage> {
           );
         },
         child: const Icon(
-          Icons.menu_book_rounded, // 📘 icon buku
+          Icons.menu_book_rounded,
           size: 30,
           color: Colors.black,
         ),
@@ -61,7 +95,10 @@ class _HomeGuruPageState extends State<HomeGuruPage> {
         onTap: (i) => setState(() => selectedIndex = i),
       ),
 
-      body: IndexedStack(index: selectedIndex, children: pages),
+      body: IndexedStack(
+        index: selectedIndex,
+        children: pages,
+      ),
     );
   }
 }

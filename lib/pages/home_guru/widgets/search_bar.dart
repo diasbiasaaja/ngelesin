@@ -9,18 +9,21 @@ class GuruSearchInput extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: TextField(
         onChanged: (value) {
-          // nanti filter request / jadwal
+          // 🔜 NANTI: filter request / jadwal dari Firestore
           debugPrint("search: $value");
         },
         decoration: InputDecoration(
           hintText: "Cari siswa atau permintaan...",
           prefixIcon: const Icon(Icons.search),
+
+          // 🔧 FILTER ICON (BELUM AKTIF)
           suffixIcon: IconButton(
             icon: const Icon(Icons.tune_rounded),
             onPressed: () {
               debugPrint("filter diklik");
             },
           ),
+
           filled: true,
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
