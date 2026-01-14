@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterGuru extends StatefulWidget {
   const RegisterGuru({super.key});
@@ -20,311 +24,252 @@ class _RegisterGuruState extends State<RegisterGuru> {
   final TextEditingController confirmPasswordCtrl = TextEditingController();
 
   String? pendidikan;
-  File? ijazah;
-  File? sertifikat;
 
-  bool hidePassword = true;
-  bool hideConfirmPassword = true;
+  // WEB-SAFE
+  XFile? ijazah;
+  XFile? sertifikat;
 
-  final picker = ImagePicker();
+  bool isLoading = false;
 
-  Future pilihFoto(bool isIjazah) async {
-    final foto = await picker.pickImage(source: ImageSource.gallery);
-    if (foto != null) {
+  final ImagePicker picker = ImagePicker();
+
+  /// ================= CLOUDINARY =================
+  final String cloudName = "dhamjmtwu";
+  final String uploadPreset = "guru_unsigned"; // UNSIGNED
+
+  /// ================= PICK IMAGE =================
+  Future<void> pickImage(bool isIjazah) async {
+    final XFile? img = await picker.pickImage(source: ImageSource.gallery);
+    if (img != null) {
       setState(() {
         if (isIjazah) {
-          ijazah = File(foto.path);
+          ijazah = img;
         } else {
-          sertifikat = File(foto.path);
+          sertifikat = img;
         }
       });
     }
   }
 
+  /// ================= UPLOAD CLOUDINARY =================
+  Future<String?> uploadToCloudinary(XFile file) async {
+    final uri =
+        Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/image/upload");
+
+    final bytes = await file.readAsBytes();
+
+    final request = http.MultipartRequest("POST", uri)
+      ..fields['upload_preset'] = uploadPreset
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: file.name,
+        ),
+      );
+
+    final response = await request.send();
+
+    if (response.statusCode == 200) {
+      final resStr = await response.stream.bytesToString();
+      final data = jsonDecode(resStr);
+      return data['secure_url'];
+    }
+    return null;
+  }
+
+  /// ================= REGISTER GURU =================
+  Future<void> daftarGuru() async {
+    if (namaCtrl.text.isEmpty ||
+        emailCtrl.text.isEmpty ||
+        hpCtrl.text.isEmpty ||
+        alamatCtrl.text.isEmpty ||
+        passwordCtrl.text.isEmpty ||
+        confirmPasswordCtrl.text.isEmpty ||
+        pendidikan == null ||
+        ijazah == null ||
+        sertifikat == null) {
+      _msg("Lengkapi semua data & upload dokumen");
+      return;
+    }
+
+    if (passwordCtrl.text != confirmPasswordCtrl.text) {
+      _msg("Password tidak sama");
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      // 1️⃣ AUTH
+      UserCredential userCred =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailCtrl.text.trim(),
+        password: passwordCtrl.text.trim(),
+      );
+
+      // 2️⃣ UPLOAD FOTO
+      String? ijazahUrl = await uploadToCloudinary(ijazah!);
+      String? sertifikatUrl = await uploadToCloudinary(sertifikat!);
+
+      if (ijazahUrl == null || sertifikatUrl == null) {
+        throw Exception("Upload gagal");
+      }
+
+      // 3️⃣ FIRESTORE (TANPA VERIFIKASI)
+      await FirebaseFirestore.instance
+          .collection("guru")
+          .doc(userCred.user!.uid)
+          .set({
+        "uid": userCred.user!.uid,
+        "nama": namaCtrl.text.trim(),
+        "email": emailCtrl.text.trim(),
+        "hp": hpCtrl.text.trim(),
+        "alamat": alamatCtrl.text.trim(),
+        "pendidikan": pendidikan,
+        "ijazah_url": ijazahUrl,
+        "sertifikat_url": sertifikatUrl,
+        "role": "guru",
+        "createdAt": Timestamp.now(),
+      });
+
+      _msg("Pendaftaran berhasil, silakan login");
+      Navigator.pop(context); // balik ke login
+    } catch (e) {
+      _msg("Gagal daftar guru");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _msg(String t) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(t)));
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Color(0xFF0A1A44)),
-        title: const Text(
-          "Daftar Guru",
-          style: TextStyle(
-            color: Color(0xFF0A1A44),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
-
+      appBar: AppBar(title: const Text("Daftar Guru")),
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          // ========================= SLIDE 1 ==========================
+          // PAGE 1
           SingleChildScrollView(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _title("Data Diri Guru"),
-                const SizedBox(height: 25),
-
-                _inputField("Nama Lengkap", namaCtrl),
-                const SizedBox(height: 15),
-
-                _inputField("Email", emailCtrl),
-                const SizedBox(height: 15),
-
-                _inputField("Nomor HP", hpCtrl),
-                const SizedBox(height: 15),
-
-                DropdownButtonFormField(
-                  value: pendidikan,
-                  items:
-                      [
-                            "SMA/SMK",
-                            "Diploma",
-                            "Sarjana (S1)",
-                            "Magister (S2)",
-                            "Doktor (S3)",
-                          ]
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                  decoration: _inputStyle("Pendidikan Terakhir"),
-                  onChanged: (v) => setState(() => pendidikan = v),
-                ),
-
-                const SizedBox(height: 15),
-
-                _inputField("Alamat Lengkap", alamatCtrl),
-                const SizedBox(height: 15),
-
-                // PASSWORD
-                _passwordField(
-                  label: "Password",
-                  controller: passwordCtrl,
-                  isHidden: hidePassword,
-                  onToggle: () {
-                    setState(() => hidePassword = !hidePassword);
-                  },
-                ),
-
-                const SizedBox(height: 15),
-
-                // KONFIRMASI PASSWORD
-                _passwordField(
-                  label: "Konfirmasi Password",
-                  controller: confirmPasswordCtrl,
-                  isHidden: hideConfirmPassword,
-                  onToggle: () {
-                    setState(() => hideConfirmPassword = !hideConfirmPassword);
-                  },
-                ),
-
-                const SizedBox(height: 30),
-
-                _buttonNavy(
-                  text: "Lanjut →",
-                  onPressed: () {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeOut,
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // ========================= SLIDE 2 ==========================
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _title("Upload Dokumen"),
-                const SizedBox(height: 25),
-
-                _uploadBoxWidget(
-                  label: "Upload Foto Ijazah",
-                  file: ijazah,
-                  onTap: () => pilihFoto(true),
-                ),
-
+                const Text("Data Diri Guru",
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
 
-                _uploadBoxWidget(
-                  label: "Upload Foto Sertifikat",
-                  file: sertifikat,
-                  onTap: () => pilihFoto(false),
+                TextField(
+                    controller: namaCtrl,
+                    decoration:
+                        const InputDecoration(labelText: "Nama Lengkap")),
+                TextField(
+                    controller: emailCtrl,
+                    decoration:
+                        const InputDecoration(labelText: "Email")),
+                TextField(
+                    controller: hpCtrl,
+                    decoration:
+                        const InputDecoration(labelText: "Nomor HP")),
+                DropdownButtonFormField<String>(
+                  value: pendidikan,
+                  decoration: const InputDecoration(
+                      labelText: "Pendidikan Terakhir"),
+                  items: const [
+                    DropdownMenuItem(
+                        value: "SMA/SMK", child: Text("SMA/SMK")),
+                    DropdownMenuItem(
+                        value: "Diploma", child: Text("Diploma")),
+                    DropdownMenuItem(
+                        value: "Sarjana (S1)",
+                        child: Text("Sarjana (S1)")),
+                    DropdownMenuItem(
+                        value: "Magister (S2)",
+                        child: Text("Magister (S2)")),
+                    DropdownMenuItem(
+                        value: "Doktor (S3)",
+                        child: Text("Doktor (S3)")),
+                  ],
+                  onChanged: (v) => setState(() => pendidikan = v),
                 ),
+                TextField(
+                    controller: alamatCtrl,
+                    decoration:
+                        const InputDecoration(labelText: "Alamat Lengkap")),
+                TextField(
+                    controller: passwordCtrl,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(labelText: "Password")),
+                TextField(
+                    controller: confirmPasswordCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                        labelText: "Konfirmasi Password")),
+                const SizedBox(height: 24),
 
-                const SizedBox(height: 30),
-
-                _buttonYellow(
-                  text: "Selesai Daftar",
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-
-                const SizedBox(height: 12),
-
-                Center(
-                  child: TextButton(
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
                     onPressed: () {
-                      _pageController.previousPage(
+                      _pageController.nextPage(
                         duration: const Duration(milliseconds: 400),
                         curve: Curves.easeOut,
                       );
                     },
-                    child: const Text(
-                      "← Kembali",
-                      style: TextStyle(color: Color(0xFF0A1A44)),
-                    ),
+                    child: const Text("Lanjut →"),
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  // ======================== UI COMPONENT =========================
-
-  Widget _title(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.w800,
-        color: Color(0xFF0A1A44),
-      ),
-    );
-  }
-
-  Widget _inputField(String label, TextEditingController controller) {
-    return TextField(controller: controller, decoration: _inputStyle(label));
-  }
-
-  Widget _passwordField({
-    required String label,
-    required TextEditingController controller,
-    required bool isHidden,
-    required Function() onToggle,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: isHidden,
-      decoration: _inputStyle(label).copyWith(
-        suffixIcon: IconButton(
-          icon: Icon(
-            isHidden ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: onToggle,
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _inputStyle(String label) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Colors.grey[200],
-      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-    );
-  }
-
-  Widget _uploadBoxWidget({
-    required String label,
-    required File? file,
-    required Function() onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade400),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: file == null
-            ? Center(
-                child: Text(
-                  label,
-                  style: const TextStyle(color: Colors.black54, fontSize: 15),
+          // PAGE 2
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                ElevatedButton(
+                  onPressed: () => pickImage(true),
+                  child: Text(
+                      ijazah == null ? "Upload Ijazah" : "Ijazah Dipilih"),
                 ),
-              )
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image.file(file, fit: BoxFit.cover),
-              ),
-      ),
-    );
-  }
-
-  Widget _buttonNavy({required String text, required Function() onPressed}) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0A1A44),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+                ElevatedButton(
+                  onPressed: () => pickImage(false),
+                  child: Text(sertifikat == null
+                      ? "Upload Sertifikat"
+                      : "Sertifikat Dipilih"),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : daftarGuru,
+                    child:
+                        Text(isLoading ? "Loading..." : "Selesai Daftar"),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  },
+                  child: const Text("← Kembali"),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
-  Widget _buttonYellow({required String text, required Function() onPressed}) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFF2C94C),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        ],
       ),
     );
   }
