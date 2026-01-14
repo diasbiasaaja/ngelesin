@@ -46,7 +46,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final uid = _auth.currentUser?.uid;
       if (uid == null) return;
 
-      // cek guru dulu
+      // ✅ cek guru dulu
       final guruDoc = await _firestore.collection("guru").doc(uid).get();
       if (guruDoc.exists) {
         final data = guruDoc.data()!;
@@ -61,12 +61,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
         return;
       }
 
-      // cek siswa
-      final siswaDoc = await _firestore.collection("siswa").doc(uid).get();
-      if (siswaDoc.exists) {
-        final data = siswaDoc.data()!;
+      // ✅ cek murid (bukan siswa)
+      final muridDoc = await _firestore.collection("murid").doc(uid).get();
+      if (muridDoc.exists) {
+        final data = muridDoc.data()!;
         setState(() {
-          role = "siswa";
+          role = "murid";
           namaC.text = (data["nama"] ?? "").toString();
           emailC.text = (data["email"] ?? "").toString();
           telpC.text = (data["hp"] ?? "").toString();
@@ -85,14 +85,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
-    final col = role == "guru" ? "guru" : "siswa";
+    // ✅ kalau role guru -> guru, kalau murid -> murid
+    final col = role == "guru" ? "guru" : "murid";
 
     await _firestore.collection(col).doc(uid).update({
       "nama": namaC.text.trim(),
       "email": emailC.text.trim(),
       "hp": telpC.text.trim(),
 
-      // hanya guru punya bio
+      // ✅ hanya guru punya bio
       if (role == "guru") "bio": bioC.text.trim(),
     });
 
@@ -102,7 +103,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       await _auth.currentUser?.updateEmail(emailC.text.trim());
     }
 
-    // update password auth kalau user isi password (optional)
+    // update password auth kalau user isi password
     if (passwordC.text.trim().isNotEmpty) {
       await _auth.currentUser?.updatePassword(passwordC.text.trim());
     }
@@ -190,14 +191,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   _input("Email", emailC),
                   _input("No. Telepon", telpC),
 
-                  // password optional
                   _input(
                     "Password (isi jika ingin ganti)",
                     passwordC,
                     isPassword: true,
                   ),
 
-                  // ✅ hanya guru ada bio
+                  // ✅ murid tidak akan masuk sini karena isGuru = false
                   if (isGuru) ...[
                     const SizedBox(height: 8),
                     _bioInput("Bio Guru", bioC),
@@ -229,7 +229,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               onPressed: () async {
                                 await _save();
 
-                                // ✅ guru lanjut ke mapel
                                 if (isGuru) {
                                   Navigator.push(
                                     context,
@@ -239,7 +238,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     ),
                                   );
                                 } else {
-                                  // ✅ siswa cukup simpan lalu balik profile
                                   Navigator.pop(context);
                                 }
                               },
@@ -252,8 +250,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-
-                          // tombol kanan tetap "Kembali" sama seperti UI kamu
                           Expanded(
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
@@ -280,7 +276,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // ================= INPUT BIASA =================
   Widget _input(
     String label,
     TextEditingController controller, {
@@ -308,7 +303,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // ================= INPUT BIO =================
   Widget _bioInput(String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
