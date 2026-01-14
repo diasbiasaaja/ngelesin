@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'edit_mapel_ampu.dart';
-import 'edit_price_page.dart';
+import 'edit_mapel_ampu.dart'; // halaman khusus guru
 
 const Color navy = Color(0xFF0A2A43);
 const Color yellowAcc = Color(0xFFFFC947);
@@ -23,12 +22,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController passwordC;
   late TextEditingController bioC;
 
-  bool isLoading = true;
-  bool isGuru =
-      true; // asumsi ini halaman guru, nanti kita ambil dari firestore
-
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+
+  bool isLoading = true;
+  String role = "guru"; // default
 
   @override
   void initState() {
@@ -37,58 +35,74 @@ class _EditProfilePageState extends State<EditProfilePage> {
     namaC = TextEditingController();
     emailC = TextEditingController();
     telpC = TextEditingController();
-    passwordC = TextEditingController(text: ""); // jangan isi password asli
+    passwordC = TextEditingController();
     bioC = TextEditingController();
 
-    _loadGuruData();
+    _loadData();
   }
 
-  Future<void> _loadGuruData() async {
+  Future<void> _loadData() async {
     try {
       final uid = _auth.currentUser?.uid;
       if (uid == null) return;
 
-      final doc = await _firestore.collection("guru").doc(uid).get();
-      final data = doc.data();
-
-      if (data != null) {
+      // cek guru dulu
+      final guruDoc = await _firestore.collection("guru").doc(uid).get();
+      if (guruDoc.exists) {
+        final data = guruDoc.data()!;
         setState(() {
+          role = "guru";
           namaC.text = (data["nama"] ?? "").toString();
           emailC.text = (data["email"] ?? "").toString();
           telpC.text = (data["hp"] ?? "").toString();
           bioC.text = (data["bio"] ?? "").toString();
-
-          // role dari firestore
-          final role = (data["role"] ?? "guru").toString();
-          isGuru = role == "guru";
+          isLoading = false;
         });
+        return;
       }
+
+      // cek siswa
+      final siswaDoc = await _firestore.collection("siswa").doc(uid).get();
+      if (siswaDoc.exists) {
+        final data = siswaDoc.data()!;
+        setState(() {
+          role = "siswa";
+          namaC.text = (data["nama"] ?? "").toString();
+          emailC.text = (data["email"] ?? "").toString();
+          telpC.text = (data["hp"] ?? "").toString();
+          isLoading = false;
+        });
+        return;
+      }
+
+      setState(() => isLoading = false);
     } catch (e) {
-      // ignore
-    } finally {
       setState(() => isLoading = false);
     }
   }
 
-  Future<void> _saveDataPribadi() async {
+  Future<void> _save() async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
-    await _firestore.collection("guru").doc(uid).update({
+    final col = role == "guru" ? "guru" : "siswa";
+
+    await _firestore.collection(col).doc(uid).update({
       "nama": namaC.text.trim(),
       "email": emailC.text.trim(),
       "hp": telpC.text.trim(),
-      "bio": bioC.text.trim(),
+
+      // hanya guru punya bio
+      if (role == "guru") "bio": bioC.text.trim(),
     });
 
-    // kalau user ubah email dari form, sekalian update auth email
+    // update email auth kalau berubah
     final currentEmail = _auth.currentUser?.email;
     if (emailC.text.trim().isNotEmpty && emailC.text.trim() != currentEmail) {
       await _auth.currentUser?.updateEmail(emailC.text.trim());
     }
 
-    // password tidak bisa diset pakai string "********"
-    // jadi kita hanya update password kalau field password diisi
+    // update password auth kalau user isi password (optional)
     if (passwordC.text.trim().isNotEmpty) {
       await _auth.currentUser?.updatePassword(passwordC.text.trim());
     }
@@ -106,6 +120,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isGuru = role == "guru";
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -127,9 +143,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: Column(
                       children: [
                         GestureDetector(
-                          onTap: () {
-                            // NANTI: Image Picker
-                          },
+                          onTap: () {},
                           child: Stack(
                             children: [
                               CircleAvatar(
@@ -175,13 +189,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   _input("Nama Lengkap", namaC),
                   _input("Email", emailC),
                   _input("No. Telepon", telpC),
+
+                  // password optional
                   _input(
                     "Password (isi jika ingin ganti)",
                     passwordC,
                     isPassword: true,
                   ),
 
-                  // ================= BIO (KHUSUS GURU) =================
+                  // ✅ hanya guru ada bio
                   if (isGuru) ...[
                     const SizedBox(height: 8),
                     _bioInput("Bio Guru", bioC),
@@ -211,8 +227,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                               ),
                               onPressed: () async {
-                                await _saveDataPribadi();
+                                await _save();
 
+                                // ✅ guru lanjut ke mapel
                                 if (isGuru) {
                                   Navigator.push(
                                     context,
@@ -222,11 +239,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     ),
                                   );
                                 } else {
+                                  // ✅ siswa cukup simpan lalu balik profile
                                   Navigator.pop(context);
                                 }
                               },
                               child: Text(
-                                isGuru ? "Lanjut" : "Update",
+                                isGuru ? "Lanjut" : "Simpan",
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -234,6 +252,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ),
                           ),
                           const SizedBox(width: 12),
+
+                          // tombol kanan tetap "Kembali" sama seperti UI kamu
                           Expanded(
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
