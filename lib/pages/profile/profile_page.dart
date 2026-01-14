@@ -1,54 +1,134 @@
 import 'package:flutter/material.dart';
-import '/dummy/dummy_user.dart';
-import 'edit_profile_page.dart';
-import 'edit_addres_page.dart';
-import 'package:ngelesin/models/usermodel.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ProfilePage extends StatelessWidget {
+import 'edit_profile_page_guru.dart';
+import 'edit_addres_page.dart';
+
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
+  /// mengambil stream data guru berdasarkan uid login
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _guruStream() {
+    final uid = _auth.currentUser?.uid;
+    return _firestore.collection("guru").doc(uid).snapshots();
+  }
+
+  /// logout
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (mounted) Navigator.pop(context); // balik
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("PROFIL"), centerTitle: true),
-      body: Column(
-        children: [
-          const SizedBox(height: 24),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: _guruStream(),
+        builder: (context, snapshot) {
+          // loading (tampilan tetap, hanya nunggu data)
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Column(
+              children: const [
+                SizedBox(height: 24),
+                CircleAvatar(radius: 40),
+                SizedBox(height: 12),
+                CircularProgressIndicator(),
+              ],
+            );
+          }
 
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: AssetImage(currentUser.fotoUrl),
-          ),
+          // kalau belum login / data tidak ada
+          if (!snapshot.hasData || snapshot.data?.data() == null) {
+            return Column(
+              children: [
+                const SizedBox(height: 24),
+                const CircleAvatar(radius: 40),
+                const SizedBox(height: 12),
+                const Text("Data guru tidak ditemukan"),
+                const SizedBox(height: 32),
+                _menu(
+                  context,
+                  "Data Pribadi",
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                  ),
+                ),
+                _menu(
+                  context,
+                  "Alamat",
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditAddressPage()),
+                  ),
+                ),
+                _menu(context, "Keluar", _logout),
+              ],
+            );
+          }
 
-          const SizedBox(height: 12),
+          final data = snapshot.data!.data()!;
 
-          Text(
-            currentUser.nama,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          // field dari Firestore (sesuai register guru kamu)
+          final String nama = (data["nama"] ?? "-").toString();
 
-          const SizedBox(height: 32),
+          /// foto profile: karena data guru belum ada foto,
+          /// kita tampilkan icon default (TIDAK merubah UI, tetap CircleAvatar)
+          /// kalau nanti kamu punya field foto_url, tinggal ganti bagian ini.
+          final String? fotoUrl = data["foto_url"];
 
-          _menu(
-            context,
-            "Data Pribadi",
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EditProfilePage()),
-            ),
-          ),
+          return Column(
+            children: [
+              const SizedBox(height: 24),
 
-          _menu(
-            context,
-            "Alamat",
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EditAddressPage()),
-            ),
-          ),
+              CircleAvatar(
+                radius: 40,
+                backgroundImage: (fotoUrl != null && fotoUrl.isNotEmpty)
+                    ? NetworkImage(fotoUrl)
+                    : null,
+                child: (fotoUrl == null || fotoUrl.isEmpty)
+                    ? const Icon(Icons.person, size: 40)
+                    : null,
+              ),
 
-          _menu(context, "Keluar", () {}),
-        ],
+              const SizedBox(height: 12),
+
+              Text(nama, style: const TextStyle(fontWeight: FontWeight.bold)),
+
+              const SizedBox(height: 32),
+
+              _menu(
+                context,
+                "Data Pribadi",
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                ),
+              ),
+
+              _menu(
+                context,
+                "Alamat",
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditAddressPage()),
+                ),
+              ),
+
+              _menu(context, "Keluar", _logout),
+            ],
+          );
+        },
       ),
     );
   }

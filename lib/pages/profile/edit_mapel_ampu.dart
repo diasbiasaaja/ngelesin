@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'edit_price_page.dart';
 
 const navy = Color(0xFF0A2A43);
@@ -16,6 +19,11 @@ class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
   final Set<String> selectedSD = {};
   final Set<String> selectedSMP = {};
   final Set<String> selectedSMA = {};
+
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
+  bool isLoading = true;
 
   // ================= DATA =================
   final sdSubjects = const [
@@ -61,6 +69,51 @@ class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
     {"icon": Icons.sports_martial_arts_rounded, "name": "PJOK"},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadMapelFromFirestore();
+  }
+
+  // ================= LOAD MAPEL FROM FIRESTORE =================
+  Future<void> _loadMapelFromFirestore() async {
+    try {
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return;
+
+      final doc = await _firestore.collection("guru").doc(uid).get();
+      final data = doc.data();
+
+      if (data != null) {
+        final List sd = (data["mapel_sd"] ?? []);
+        final List smp = (data["mapel_smp"] ?? []);
+        final List sma = (data["mapel_sma"] ?? []);
+
+        setState(() {
+          selectedSD.addAll(sd.map((e) => e.toString()));
+          selectedSMP.addAll(smp.map((e) => e.toString()));
+          selectedSMA.addAll(sma.map((e) => e.toString()));
+        });
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  // ================= SAVE MAPEL TO FIRESTORE =================
+  Future<void> _saveMapelToFirestore() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    await _firestore.collection("guru").doc(uid).update({
+      "mapel_sd": selectedSD.toList(),
+      "mapel_smp": selectedSMP.toList(),
+      "mapel_sma": selectedSMA.toList(),
+    });
+  }
+
   // ================= LOGIC =================
   void toggle(Set<String> selected, String mapel) {
     setState(() {
@@ -97,35 +150,36 @@ class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _section(
-              title: "SD",
-              subjects: sdSubjects,
-              selected: selectedSD,
-              circleSize: circleSize,
-              iconSize: iconSize,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _section(
+                    title: "SD",
+                    subjects: sdSubjects,
+                    selected: selectedSD,
+                    circleSize: circleSize,
+                    iconSize: iconSize,
+                  ),
+                  _section(
+                    title: "SMP",
+                    subjects: smpSubjects,
+                    selected: selectedSMP,
+                    circleSize: circleSize,
+                    iconSize: iconSize,
+                  ),
+                  _section(
+                    title: "SMA",
+                    subjects: smaSubjects,
+                    selected: selectedSMA,
+                    circleSize: circleSize,
+                    iconSize: iconSize,
+                  ),
+                ],
+              ),
             ),
-            _section(
-              title: "SMP",
-              subjects: smpSubjects,
-              selected: selectedSMP,
-              circleSize: circleSize,
-              iconSize: iconSize,
-            ),
-            _section(
-              title: "SMA",
-              subjects: smaSubjects,
-              selected: selectedSMA,
-              circleSize: circleSize,
-              iconSize: iconSize,
-            ),
-          ],
-        ),
-      ),
 
       // ================= TOMBOL LANJUT =================
       bottomNavigationBar: SafeArea(
@@ -145,7 +199,9 @@ class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
                     selectedSMP.isEmpty &&
                     selectedSMA.isEmpty)
                 ? null
-                : () {
+                : () async {
+                    await _saveMapelToFirestore();
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -157,7 +213,6 @@ class _EditProfileGuruPageState extends State<EditProfileGuruPage> {
                       ),
                     );
                   },
-
             child: const Text(
               "Lanjut",
               style: TextStyle(fontWeight: FontWeight.bold),

@@ -25,13 +25,16 @@ class _RegisterGuruState extends State<RegisterGuru> {
 
   String? pendidikan;
 
-  // WEB-SAFE
   XFile? ijazah;
   XFile? sertifikat;
 
   bool isLoading = false;
 
   final ImagePicker picker = ImagePicker();
+
+  /// show/hide password
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   /// ================= CLOUDINARY =================
   final String cloudName = "dhamjmtwu";
@@ -53,19 +56,16 @@ class _RegisterGuruState extends State<RegisterGuru> {
 
   /// ================= UPLOAD CLOUDINARY =================
   Future<String?> uploadToCloudinary(XFile file) async {
-    final uri =
-        Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/image/upload");
+    final uri = Uri.parse(
+      "https://api.cloudinary.com/v1_1/$cloudName/image/upload",
+    );
 
     final bytes = await file.readAsBytes();
 
     final request = http.MultipartRequest("POST", uri)
       ..fields['upload_preset'] = uploadPreset
       ..files.add(
-        http.MultipartFile.fromBytes(
-          'file',
-          bytes,
-          filename: file.name,
-        ),
+        http.MultipartFile.fromBytes('file', bytes, filename: file.name),
       );
 
     final response = await request.send();
@@ -102,11 +102,11 @@ class _RegisterGuruState extends State<RegisterGuru> {
 
     try {
       // 1️⃣ AUTH
-      UserCredential userCred =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailCtrl.text.trim(),
-        password: passwordCtrl.text.trim(),
-      );
+      UserCredential userCred = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: emailCtrl.text.trim(),
+            password: passwordCtrl.text.trim(),
+          );
 
       // 2️⃣ UPLOAD FOTO
       String? ijazahUrl = await uploadToCloudinary(ijazah!);
@@ -116,25 +116,25 @@ class _RegisterGuruState extends State<RegisterGuru> {
         throw Exception("Upload gagal");
       }
 
-      // 3️⃣ FIRESTORE (TANPA VERIFIKASI)
+      // 3️⃣ FIRESTORE
       await FirebaseFirestore.instance
           .collection("guru")
           .doc(userCred.user!.uid)
           .set({
-        "uid": userCred.user!.uid,
-        "nama": namaCtrl.text.trim(),
-        "email": emailCtrl.text.trim(),
-        "hp": hpCtrl.text.trim(),
-        "alamat": alamatCtrl.text.trim(),
-        "pendidikan": pendidikan,
-        "ijazah_url": ijazahUrl,
-        "sertifikat_url": sertifikatUrl,
-        "role": "guru",
-        "createdAt": Timestamp.now(),
-      });
+            "uid": userCred.user!.uid,
+            "nama": namaCtrl.text.trim(),
+            "email": emailCtrl.text.trim(),
+            "hp": hpCtrl.text.trim(),
+            "alamat": alamatCtrl.text.trim(),
+            "pendidikan": pendidikan,
+            "ijazah_url": ijazahUrl,
+            "sertifikat_url": sertifikatUrl,
+            "role": "guru",
+            "createdAt": Timestamp.now(),
+          });
 
       _msg("Pendaftaran berhasil, silakan login");
-      Navigator.pop(context); // balik ke login
+      Navigator.pop(context);
     } catch (e) {
       _msg("Gagal daftar guru");
     } finally {
@@ -143,128 +143,396 @@ class _RegisterGuruState extends State<RegisterGuru> {
   }
 
   void _msg(String t) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(t)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
+  }
+
+  // ================== STYLE HELPERS ==================
+  static const Color navy = Color(0xFF0B1A3A);
+  static const Color softGrey = Color(0xFFF1F1F1);
+  static const Color yellowBtn = Color(0xFFF2C94C);
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: softGrey,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  Widget _space() => const SizedBox(height: 14);
+
+  /// ================= UPLOAD UI (PREVIEW IMAGE) =================
+  Widget _uploadBox({
+    required String title,
+    required XFile? file,
+    required VoidCallback onTap,
+    required VoidCallback onRemove,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: softGrey,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Stack(
+          children: [
+            // preview image
+            if (file != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.network(
+                  file.path,
+                  width: double.infinity,
+                  height: 140,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    // fallback kalau Image.network gak support di device tertentu
+                    return Container(
+                      height: 140,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.image,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              Container(
+                height: 140,
+                alignment: Alignment.center,
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+
+            // overlay text
+            if (file != null)
+              Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.black.withOpacity(0.25),
+                ),
+              ),
+
+            if (file != null)
+              Positioned(
+                left: 14,
+                bottom: 14,
+                child: Text(
+                  "$title ✓",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+
+            // button remove/change
+            Positioned(
+              right: 10,
+              top: 10,
+              child: Row(
+                children: [
+                  if (file != null)
+                    InkWell(
+                      onTap: onRemove,
+                      borderRadius: BorderRadius.circular(30),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.delete,
+                          size: 18,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: onTap,
+                    borderRadius: BorderRadius.circular(30),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.edit, size: 18, color: navy),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Daftar Guru")),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: navy,
+        centerTitle: true,
+        title: const Text(
+          "Daftar Guru",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          // PAGE 1
+          // ================= PAGE 1 =================
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Data Diri Guru",
-                    style:
-                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
+                const Text(
+                  "Data Diri Guru",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: navy,
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 TextField(
-                    controller: namaCtrl,
-                    decoration:
-                        const InputDecoration(labelText: "Nama Lengkap")),
+                  controller: namaCtrl,
+                  decoration: _inputDecoration("Nama Lengkap"),
+                ),
+                _space(),
                 TextField(
-                    controller: emailCtrl,
-                    decoration:
-                        const InputDecoration(labelText: "Email")),
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: _inputDecoration("Email"),
+                ),
+                _space(),
                 TextField(
-                    controller: hpCtrl,
-                    decoration:
-                        const InputDecoration(labelText: "Nomor HP")),
+                  controller: hpCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: _inputDecoration("Nomor HP"),
+                ),
+                _space(),
+
                 DropdownButtonFormField<String>(
                   value: pendidikan,
-                  decoration: const InputDecoration(
-                      labelText: "Pendidikan Terakhir"),
+                  decoration: _inputDecoration("Pendidikan Terakhir").copyWith(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                  ),
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   items: const [
+                    DropdownMenuItem(value: "SMA/SMK", child: Text("SMA/SMK")),
+                    DropdownMenuItem(value: "Diploma", child: Text("Diploma")),
                     DropdownMenuItem(
-                        value: "SMA/SMK", child: Text("SMA/SMK")),
+                      value: "Sarjana (S1)",
+                      child: Text("Sarjana (S1)"),
+                    ),
                     DropdownMenuItem(
-                        value: "Diploma", child: Text("Diploma")),
+                      value: "Magister (S2)",
+                      child: Text("Magister (S2)"),
+                    ),
                     DropdownMenuItem(
-                        value: "Sarjana (S1)",
-                        child: Text("Sarjana (S1)")),
-                    DropdownMenuItem(
-                        value: "Magister (S2)",
-                        child: Text("Magister (S2)")),
-                    DropdownMenuItem(
-                        value: "Doktor (S3)",
-                        child: Text("Doktor (S3)")),
+                      value: "Doktor (S3)",
+                      child: Text("Doktor (S3)"),
+                    ),
                   ],
                   onChanged: (v) => setState(() => pendidikan = v),
                 ),
+
+                _space(),
                 TextField(
-                    controller: alamatCtrl,
-                    decoration:
-                        const InputDecoration(labelText: "Alamat Lengkap")),
+                  controller: alamatCtrl,
+                  decoration: _inputDecoration("Alamat Lengkap"),
+                ),
+                _space(),
+
+                // PASSWORD WITH EYE
                 TextField(
-                    controller: passwordCtrl,
-                    obscureText: true,
-                    decoration:
-                        const InputDecoration(labelText: "Password")),
+                  controller: passwordCtrl,
+                  obscureText: _obscurePassword,
+                  decoration: _inputDecoration("Password").copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey.shade700,
+                      ),
+                      onPressed: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                    ),
+                  ),
+                ),
+                _space(),
+
+                // CONFIRM PASSWORD WITH EYE
                 TextField(
-                    controller: confirmPasswordCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                        labelText: "Konfirmasi Password")),
-                const SizedBox(height: 24),
+                  controller: confirmPasswordCtrl,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: _inputDecoration("Konfirmasi Password").copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey.shade700,
+                      ),
+                      onPressed: () {
+                        setState(
+                          () => _obscureConfirmPassword =
+                              !_obscureConfirmPassword,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 26),
 
                 SizedBox(
                   width: double.infinity,
+                  height: 56,
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: navy,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      elevation: 0,
+                    ),
                     onPressed: () {
                       _pageController.nextPage(
                         duration: const Duration(milliseconds: 400),
                         curve: Curves.easeOut,
                       );
                     },
-                    child: const Text("Lanjut →"),
+                    child: const Text(
+                      "Lanjut →",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
-          // PAGE 2
+          // ================= PAGE 2 =================
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton(
-                  onPressed: () => pickImage(true),
-                  child: Text(
-                      ijazah == null ? "Upload Ijazah" : "Ijazah Dipilih"),
-                ),
-                ElevatedButton(
-                  onPressed: () => pickImage(false),
-                  child: Text(sertifikat == null
-                      ? "Upload Sertifikat"
-                      : "Sertifikat Dipilih"),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : daftarGuru,
-                    child:
-                        Text(isLoading ? "Loading..." : "Selesai Daftar"),
+                const Text(
+                  "Upload Dokumen",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: navy,
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    _pageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    );
+                const SizedBox(height: 24),
+
+                _uploadBox(
+                  title: "Upload Foto Ijazah",
+                  file: ijazah,
+                  onTap: () => pickImage(true),
+                  onRemove: () {
+                    setState(() => ijazah = null);
                   },
-                  child: const Text("← Kembali"),
+                ),
+
+                const SizedBox(height: 18),
+
+                _uploadBox(
+                  title: "Upload Foto Sertifikat",
+                  file: sertifikat,
+                  onTap: () => pickImage(false),
+                  onRemove: () {
+                    setState(() => sertifikat = null);
+                  },
+                ),
+
+                const SizedBox(height: 30),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: yellowBtn,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: isLoading ? null : daftarGuru,
+                    child: Text(
+                      isLoading ? "Loading..." : "Selesai Daftar",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      );
+                    },
+                    child: const Text(
+                      "← Kembali",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: navy,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
