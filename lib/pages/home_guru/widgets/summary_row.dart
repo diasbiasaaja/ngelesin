@@ -14,10 +14,7 @@ class SummaryRow extends StatelessWidget {
   });
 
   String _formatRupiah(int value) {
-    return "Rp ${value.toString().replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (m) => "${m[1]}.",
-    )}";
+    return "Rp ${value.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => "${m[1]}.")}";
   }
 
   @override
@@ -27,17 +24,11 @@ class SummaryRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _SummaryCard(
-              title: "Saldo",
-              value: _formatRupiah(saldo),
-            ),
+            child: _SummaryCard(title: "Saldo", value: _formatRupiah(saldo)),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _SummaryCard(
-              title: "Hari Ini",
-              value: "$sesiHariIni Sesi",
-            ),
+            child: _SummaryCard(title: "Hari Ini", value: "$sesiHariIni Sesi"),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -56,10 +47,7 @@ class _SummaryCard extends StatelessWidget {
   final String title;
   final String value;
 
-  const _SummaryCard({
-    required this.title,
-    required this.value,
-  });
+  const _SummaryCard({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -79,13 +67,7 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
-          ),
+          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 6),
           Text(
             value,

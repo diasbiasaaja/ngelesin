@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../../models/guru_model.dart';
 import '../../../../theme/colors.dart';
 import '../pembayaran/paymen.dart';
@@ -16,6 +20,23 @@ class _BookingPageState extends State<BookingPage> {
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
 
+  final _auth = FirebaseAuth.instance;
+
+  // ✅ WAJIB untuk Flutter Web
+  final _db = FirebaseDatabase.instanceFor(
+    app: FirebaseAuth.instance.app,
+    databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
+  ).ref();
+
+  String selectedHargaType = "single"; // single | group1_5 | group6_10
+
+  String safeKey(String input) {
+    return input
+        .trim()
+        .replaceAll(RegExp(r'[.#$\[\]]'), '')
+        .replaceAll(RegExp(r'\s+'), '_');
+  }
+
   Future<void> pickDate() async {
     final date = await showDatePicker(
       context: context,
@@ -32,6 +53,77 @@ class _BookingPageState extends State<BookingPage> {
       initialTime: TimeOfDay.now(),
     );
     if (time != null) setState(() => selectedTime = time);
+  }
+
+  String _formatDate(DateTime d) {
+    return "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+  }
+
+  String _formatTime(TimeOfDay t) {
+    return "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+  }
+
+  int _getSelectedHarga(Guru guru) {
+    if (selectedHargaType == "group1_5") {
+      return guru.hargaKelompok?.harga1_5 ?? guru.hargaPerJam;
+    }
+    if (selectedHargaType == "group6_10") {
+      return guru.hargaKelompok?.harga6_10 ?? guru.hargaPerJam;
+    }
+    return guru.hargaPerJam;
+  }
+
+  Future<Map<String, dynamic>> _getMuridData(String uid) async {
+    // ✅ ambil dari Firestore collection murid (sesuai screenshot kamu)
+    final doc = await FirebaseFirestore.instance
+        .collection("murid")
+        .doc(uid)
+        .get();
+    if (!doc.exists) return {"nama": uid};
+
+    final data = doc.data() ?? {};
+    return {
+      "nama": (data["nama"] ?? uid).toString(),
+      "email": (data["email"] ?? "").toString(),
+      "pendidikan": (data["pendidikan"] ?? "").toString(),
+    };
+  }
+
+  Future<String?> _createBookingRTDB({
+    required int totalHarga,
+    required String hargaType,
+    required String muridUid,
+    required String guruUid,
+    required String muridNama,
+  }) async {
+    try {
+      final guru = widget.guru;
+
+      final bookingRef = _db.child("bookings").child(muridUid).push();
+      final bookingId = bookingRef.key;
+      if (bookingId == null) return null;
+
+      await bookingRef.set({
+        "bookingId": bookingId,
+        "muridUid": muridUid,
+        "muridNama": muridNama, // ✅ biar request tampil nama
+        "guruUid": guruUid,
+        "guruNama": guru.nama,
+        "mapel": guru.mapel,
+        "tanggal": _formatDate(selectedDate!),
+        "jam": _formatTime(selectedTime!),
+        "hargaType": hargaType,
+        "totalHarga": totalHarga,
+        "status": "pending", // pending -> paid -> accepted -> selesai
+        "createdAt": ServerValue.timestamp,
+      });
+
+      return bookingId;
+    } catch (e, s) {
+      debugPrint("RTDB SET ERROR: $e");
+      debugPrint("STACKTRACE: $s");
+      return null;
+    }
   }
 
   @override
@@ -77,6 +169,7 @@ class _BookingPageState extends State<BookingPage> {
                     CircleAvatar(
                       radius: 36,
                       backgroundImage: AssetImage(guru.fotoUrl),
+                      onBackgroundImageError: (_, __) {},
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -132,6 +225,61 @@ class _BookingPageState extends State<BookingPage> {
                 ),
               ],
 
+              const SizedBox(height: 14),
+
+              // ✅ PILIH PAKET
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 10,
+                      color: Colors.black.withOpacity(0.06),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Pilih Paket",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      value: "single",
+                      groupValue: selectedHargaType,
+                      onChanged: (v) => setState(() => selectedHargaType = v!),
+                      title: const Text("1 Siswa"),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    if (guru.hargaKelompok != null) ...[
+                      RadioListTile<String>(
+                        value: "group1_5",
+                        groupValue: selectedHargaType,
+                        onChanged: (v) =>
+                            setState(() => selectedHargaType = v!),
+                        title: const Text("Kelompok 1–5"),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      RadioListTile<String>(
+                        value: "group6_10",
+                        groupValue: selectedHargaType,
+                        onChanged: (v) =>
+                            setState(() => selectedHargaType = v!),
+                        title: const Text("Kelompok 6–10"),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 24),
 
               // ================= JADWAL =================
@@ -169,7 +317,7 @@ class _BookingPageState extends State<BookingPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (selectedDate == null || selectedTime == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -181,7 +329,40 @@ class _BookingPageState extends State<BookingPage> {
                       return;
                     }
 
-                    final totalHarga = guru.hargaPerJam;
+                    final muridUid = _auth.currentUser?.uid;
+                    if (muridUid == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("User belum login")),
+                      );
+                      return;
+                    }
+
+                    // ✅ guruUid dibuat dari nama guru
+                    final guruUid = safeKey(guru.nama);
+
+                    final muridData = await _getMuridData(muridUid);
+                    final muridNama = muridData["nama"].toString();
+
+                    final totalHarga = _getSelectedHarga(guru);
+
+                    final bookingId = await _createBookingRTDB(
+                      totalHarga: totalHarga,
+                      hargaType: selectedHargaType,
+                      muridUid: muridUid,
+                      guruUid: guruUid,
+                      muridNama: muridNama,
+                    );
+
+                    if (bookingId == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Booking gagal disimpan, coba lagi ya...",
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
                     Navigator.push(
                       context,
@@ -191,11 +372,13 @@ class _BookingPageState extends State<BookingPage> {
                           date: selectedDate!,
                           time: selectedTime!,
                           totalHarga: totalHarga,
+                          bookingId: bookingId,
+                          muridUid: muridUid,
+                          guruUid: guruUid,
                         ),
                       ),
                     );
                   },
-
                   style: ElevatedButton.styleFrom(
                     backgroundColor: navy,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -234,7 +417,6 @@ class _BookingPageState extends State<BookingPage> {
   }
 }
 
-// ================= PICKER =================
 class _PickerItem extends StatelessWidget {
   final String title;
   final IconData icon;

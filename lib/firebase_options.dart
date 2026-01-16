@@ -47,6 +47,8 @@ class DefaultFirebaseOptions {
     projectId: 'ngelesin',
     authDomain: 'ngelesin.firebaseapp.com',
     storageBucket: 'ngelesin.firebasestorage.app',
+    databaseURL:
+        "https://ngelesin-default-rtdb.asia-southeast1.firebasedatabase.app",
   );
 
   static const FirebaseOptions android = FirebaseOptions(

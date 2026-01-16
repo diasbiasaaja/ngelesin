@@ -3,14 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'widgets/custom_navbar.dart';
-
 import 'guru_home_content.dart';
 import '../jadwal/jadwal_page.dart';
 import '../../chat/chat_list.dart';
 import '../materi/MateriPage.dart';
 import '../profile/profile_page.dart';
 
-// ================= THEME =================
 const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
 
@@ -24,7 +22,7 @@ class HomeGuruPage extends StatefulWidget {
 class _HomeGuruPageState extends State<HomeGuruPage> {
   int selectedIndex = 0;
 
-  String? namaGuru;
+  String namaGuru = "Guru"; // ✅ fallback biar ga blank
   bool isLoading = true;
 
   @override
@@ -33,35 +31,45 @@ class _HomeGuruPageState extends State<HomeGuruPage> {
     _loadGuru();
   }
 
-  // ================= LOAD DATA GURU =================
   Future<void> _loadGuru() async {
-    final user = FirebaseAuth.instance.currentUser;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
 
-    if (user == null) return;
+      // ✅ kalau ga login jangan ngegantung
+      if (user == null) {
+        setState(() => isLoading = false);
+        return;
+      }
 
-    final doc = await FirebaseFirestore.instance
-        .collection('guru')
-        .doc(user.uid)
-        .get();
+      final doc = await FirebaseFirestore.instance
+          .collection('guru')
+          .doc(user.uid)
+          .get();
 
-    if (doc.exists) {
+      // ✅ kalau doc ga ada jangan ngegantung
+      if (!doc.exists) {
+        setState(() => isLoading = false);
+        return;
+      }
+
       setState(() {
-        namaGuru = doc['nama'];
+        namaGuru = (doc.data()?['nama'] ?? "Guru").toString();
         isLoading = false;
       });
+    } catch (e) {
+      // ✅ kalau error jangan ngegantung
+      setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final pages = [
-      GuruHomeContent(namaGuru: namaGuru!), // 🔥 KIRIM NAMA GURU
+      GuruHomeContent(namaGuru: namaGuru),
       const JadwalPage(),
       const ChatListPage(),
       const ProfilePage(),
@@ -95,10 +103,7 @@ class _HomeGuruPageState extends State<HomeGuruPage> {
         onTap: (i) => setState(() => selectedIndex = i),
       ),
 
-      body: IndexedStack(
-        index: selectedIndex,
-        children: pages,
-      ),
+      body: IndexedStack(index: selectedIndex, children: pages),
     );
   }
 }

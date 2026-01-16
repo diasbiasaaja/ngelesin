@@ -1,16 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+
 import '../../../models/teaching_request.dart';
 
 class DetailSiswaPage extends StatelessWidget {
   final TeachingRequest request;
   final bool showAcceptButton;
 
+  // ✅ TAMBAHAN biar gak error & konsisten key
+  final String guruNama;
+
   const DetailSiswaPage({
     super.key,
     required this.request,
+    required this.guruNama,
     this.showAcceptButton = false,
   });
+
+  // ✅ sanitize key untuk RTDB path
+  String safeKey(String input) {
+    return input
+        .trim()
+        .replaceAll(RegExp(r'[.#$\[\]]'), '')
+        .replaceAll(RegExp(r'\s+'), '_');
+  }
+
+  Future<void> _acceptRequest(BuildContext context) async {
+    try {
+      final guruKey = safeKey(guruNama);
+
+      final db = FirebaseDatabase.instanceFor(
+        app: FirebaseAuth.instance.app,
+        databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
+      ).ref();
+
+      final bookingId = request.bookingId;
+      final muridUid = request.muridUid;
+      final totalHarga = request.harga;
+
+      if (bookingId.isEmpty || muridUid.isEmpty) {
+        throw Exception("bookingId/muridUid kosong");
+      }
+
+      // ✅ 1) update status di request guru jadi accepted
+      final reqRef = db.child("requests_guru/$guruKey/$bookingId");
+      await reqRef.update({"status": "accepted"});
+
+      // ✅ 2) update booking murid juga jadi accepted
+      final bookingRef = db.child("bookings/$muridUid/$bookingId");
+      await bookingRef.update({"status": "accepted"});
+
+      // ✅ 3) saldo guru baru bertambah saat accepted
+      final saldoRef = db.child("saldo_guru/$guruKey/saldo");
+      await saldoRef.runTransaction((current) {
+        final cur = (current as int?) ?? 0;
+        return Transaction.success(cur + totalHarga);
+      });
+
+      // ✅ 4) masuk sesi hari ini (optional)
+      final sesiRef = db.child("guru_hari_ini/$guruKey/$bookingId");
+      final snap = await reqRef.get();
+      if (snap.exists) {
+        await sesiRef.set(snap.value);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Request diterima ✅ Saldo bertambah")),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal menerima: $e")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +130,6 @@ class DetailSiswaPage extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // ================= CARD INFO =================
             _InfoTile(
               title: "Jumlah Siswa",
               value: "${request.jumlahSiswa} Orang",
@@ -93,7 +158,7 @@ class DetailSiswaPage extends StatelessWidget {
 
             const Spacer(),
 
-            // ================= BUTTON TERIMA (KHUSUS REQUEST) =================
+            // ================= BUTTON TERIMA =================
             if (showAcceptButton)
               SizedBox(
                 width: double.infinity,
@@ -106,12 +171,7 @@ class DetailSiswaPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {
-                    // TODO: backend → terima request
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Request diterima")),
-                    );
-                  },
+                  onPressed: () => _acceptRequest(context),
                   child: const Text(
                     "Terima",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -125,7 +185,6 @@ class DetailSiswaPage extends StatelessWidget {
   }
 }
 
-/// ================= INFO TILE =================
 class _InfoTile extends StatelessWidget {
   final String title;
   final String value;

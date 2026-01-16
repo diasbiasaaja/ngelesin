@@ -1,22 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 import 'package:ngelesin/models/teaching_request.dart';
 import 'package:ngelesin/pages/detail/detail_siswa.dart';
 import 'request_tile.dart';
 
-
 class RequestList extends StatelessWidget {
-  const RequestList({super.key});
+  final String namaGuru;
+
+  const RequestList({super.key, required this.namaGuru});
+
+  // ✅ sanitize key untuk RTDB path
+  String safeKey(String input) {
+    return input
+        .trim()
+        .replaceAll(RegExp(r'[.#$\[\]]'), '')
+        .replaceAll(RegExp(r'\s+'), '_');
+  }
+
+  TimeOfDay _parseTime(String time) {
+    final parts = time.split(":");
+    return TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 0,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('teaching_requests')
-          .where('status', isEqualTo: 'pending')
-          .orderBy('tanggal', descending: false)
-          .snapshots(),
+    final guruKey = safeKey(namaGuru);
+
+    final db = FirebaseDatabase.instanceFor(
+      app: FirebaseAuth.instance.app,
+      databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
+    ).ref();
+
+    final requestRef = db.child("requests_guru/$guruKey");
+
+    return StreamBuilder<DatabaseEvent>(
+      stream: requestRef.onValue,
       builder: (context, snapshot) {
         // 🔄 loading
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -26,8 +49,8 @@ class RequestList extends StatelessWidget {
           );
         }
 
-        // ❌ kosong
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        // kosong
+        if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
           return const Padding(
             padding: EdgeInsets.all(20),
             child: Text(
@@ -37,30 +60,78 @@ class RequestList extends StatelessWidget {
           );
         }
 
-        // ✅ ADA DATA
-        final docs = snapshot.data!.docs;
+        final raw = snapshot.data!.snapshot.value;
+
+        if (raw is! Map) {
+          return const Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+              "Belum ada permintaan mengajar",
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+
+        // convert map -> list
+        final entries = raw.entries.toList();
+
+        // sort by createdAt (optional)
+        entries.sort((a, b) {
+          final aTime = (a.value["createdAt"] ?? 0) as int;
+          final bTime = (b.value["createdAt"] ?? 0) as int;
+          return bTime.compareTo(aTime);
+        });
 
         return Column(
-          children: docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
+          children: entries.map((entry) {
+            final data = entry.value;
+
+            if (data is! Map) return const SizedBox();
+
+            final status = (data["status"] ?? "").toString();
+
+            // tampilkan request yang paid / pending saja
+            // kamu bisa ganti kalo mau
+            if (status != "paid" && status != "pending") {
+              return const SizedBox();
+            }
+
+            final bookingId = (data["bookingId"] ?? entry.key).toString();
+            final muridUid = (data["muridUid"] ?? "").toString();
+            final muridNama = (data["muridNama"] ?? "Murid").toString();
+
+            final mapel = (data["mapel"] ?? "-").toString();
+            final jam = (data["jam"] ?? "00:00").toString();
+            final tanggalStr = (data["tanggal"] ?? "").toString();
+
+            final harga = int.tryParse("${data["totalHarga"]}") ?? 0;
+
+            DateTime tanggal;
+            try {
+              tanggal = DateTime.parse(tanggalStr);
+            } catch (_) {
+              tanggal = DateTime.now();
+            }
 
             final request = TeachingRequest(
-              namaSiswa: data['nama_siswa'],
-              mapel: data['mapel'],
-              alamat: data['alamat'],
-              jarak: data['jarak'],
-              harga: data['harga'],
+              bookingId: bookingId,
+              muridUid: muridUid,
+              namaSiswa: muridNama,
+              mapel: mapel,
+              alamat: (data["alamat"] ?? "-").toString(),
+              jarak: (data["jarak"] ?? "-").toString(),
+              harga: harga,
               jumlahSiswa: 1,
-              tanggal: (data['tanggal'] as Timestamp).toDate(),
-              jamMulai: _parseTime(data['jam_mulai']),
-              jamSelesai: _parseTime(data['jam_selesai']),
+              tanggal: tanggal,
+              jamMulai: _parseTime(jam),
+              jamSelesai: _parseTime(jam),
               fotoUrl: "",
             );
 
             return RequestTile(
-              title: "${data['mapel']} - ${data['nama_siswa']}",
-              subtitle: "${data['alamat']} • ${data['jarak']}",
-              price: "Rp ${data['harga']} / sesi",
+              title: "$mapel - $muridNama", // ✅ tampil nama murid
+              subtitle: "${tanggalStr} • $jam",
+              price: "Rp $harga / sesi",
               onTap: () {
                 Navigator.push(
                   context,
@@ -68,6 +139,7 @@ class RequestList extends StatelessWidget {
                     builder: (_) => DetailSiswaPage(
                       request: request,
                       showAcceptButton: true,
+                      guruNama: namaGuru, // ✅ penting buat guruKey
                     ),
                   ),
                 );
@@ -76,15 +148,6 @@ class RequestList extends StatelessWidget {
           }).toList(),
         );
       },
-    );
-  }
-
-  // 🔧 helper jam
-  TimeOfDay _parseTime(String time) {
-    final parts = time.split(":");
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
     );
   }
 }

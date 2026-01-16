@@ -36,7 +36,10 @@ class _JadwalPageState extends State<JadwalPage> {
         jumlahSiswa: 1,
         tanggal: DateTime.now(),
         jamMulai: const TimeOfDay(hour: 12, minute: 0), // ✅ koma
-        jamSelesai: const TimeOfDay(hour: 15, minute: 0), // ✅ koma
+        jamSelesai: const TimeOfDay(hour: 15, minute: 0),
+        bookingId: '',
+        muridUid: '',
+        fotoUrl: '', // ✅ koma
       ),
       TeachingRequest(
         namaSiswa: "Ramon",
@@ -47,7 +50,10 @@ class _JadwalPageState extends State<JadwalPage> {
         jumlahSiswa: 2,
         tanggal: DateTime.now().add(const Duration(days: 2)),
         jamMulai: const TimeOfDay(hour: 16, minute: 0), // ✅ koma
-        jamSelesai: const TimeOfDay(hour: 18, minute: 0), // ✅ koma
+        jamSelesai: const TimeOfDay(hour: 18, minute: 0),
+        bookingId: '',
+        muridUid: '',
+        fotoUrl: '', // ✅ koma
       ),
     ];
   }
@@ -174,7 +180,8 @@ class _JadwalTile extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => DetailSiswaPage(
               // ✅ NAMA BENAR
-              request: request, // ✅ DATA DIKIRIM
+              request: request,
+              guruNama: '', // ✅ DATA DIKIRIM
             ),
           ),
         );
