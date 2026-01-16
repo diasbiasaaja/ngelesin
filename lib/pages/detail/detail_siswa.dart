@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -9,31 +9,20 @@ import '../../../models/teaching_request.dart';
 class DetailSiswaPage extends StatelessWidget {
   final TeachingRequest request;
   final bool showAcceptButton;
-  final String guruNama;
 
   const DetailSiswaPage({
     super.key,
     required this.request,
     this.showAcceptButton = false,
-    required this.guruNama,
+    required String guruNama,
   });
 
-  // ✅ safe key RTDB
-  String safeKey(String input) {
-    return input
-        .trim()
-        .replaceAll(RegExp(r'[.#$\[\]]'), '')
-        .replaceAll(RegExp(r'\s+'), '_');
-  }
-
-  // ✅ ACCEPT REQUEST
   Future<void> _acceptRequest(BuildContext context) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("Guru belum login");
 
-      // ✅ guruKey harus konsisten dengan yang di RequestList & HomeContent
-      final guruKey = safeKey(guruNama.isNotEmpty ? guruNama : user.uid);
+      final guruKey = user.uid;
 
       final db = FirebaseDatabase.instanceFor(
         app: FirebaseAuth.instance.app,
@@ -45,53 +34,24 @@ class DetailSiswaPage extends StatelessWidget {
 
       if (bookingId.isEmpty) throw Exception("bookingId kosong");
 
-      // =======================
-      // 1) UPDATE STATUS REQUEST
-      // =======================
+      // ✅ 1) update status -> accepted
       final requestRef = db.child("requests_guru/$guruKey/$bookingId");
       await requestRef.update({"status": "accepted"});
 
-      // =======================
-      // 2) PINDAHIN KE JADWAL
-      // =======================
+      // ✅ 2) pindah ke jadwal_guru
       final jadwalRef = db.child("jadwal_guru/$guruKey/$bookingId");
       final snap = await requestRef.get();
-
       if (snap.exists) {
         await jadwalRef.set(snap.value);
-      } else {
-        await jadwalRef.set({
-          "bookingId": bookingId,
-          "muridUid": request.muridUid,
-          "mapel": request.mapel,
-          "tanggal":
-              "${request.tanggal.year}-${request.tanggal.month.toString().padLeft(2, '0')}-${request.tanggal.day.toString().padLeft(2, '0')}",
-          "jam":
-              "${request.jamMulai.hour.toString().padLeft(2, '0')}:${request.jamMulai.minute.toString().padLeft(2, '0')}",
-          "totalHarga": totalHarga,
-          "status": "accepted",
-          "createdAt": ServerValue.timestamp,
-        });
       }
 
-      // =======================
-      // 3) SALDO MASUK SAAT ACCEPTED
-      // =======================
+      // ✅ 3) tambah saldo pas accepted (WEB AMAN)
       final saldoRef = db.child("saldo_guru/$guruKey/saldo");
 
-      final snapSaldo = await saldoRef.get();
-      final cur = (snapSaldo.value is int)
-          ? snapSaldo.value as int
-          : int.tryParse("${snapSaldo.value}") ?? 0;
-
-      await saldoRef.set(cur + totalHarga);
-
-      // =======================
-      // 4) OPTIONAL: HILANGKAN DARI LIST REQUEST PAID
-      // (kalau kamu masih filter paid doang, ini otomatis hilang,
-      // tapi biar rapi juga bisa hapus)
-      // =======================
-      // await requestRef.remove();
+      await saldoRef.runTransaction((Object? current) {
+        final cur = (current is int) ? current : int.tryParse("$current") ?? 0;
+        return Transaction.success(cur + totalHarga);
+      });
 
       ScaffoldMessenger.of(
         context,
@@ -113,7 +73,6 @@ class DetailSiswaPage extends StatelessWidget {
     final jamFormatted =
         "${request.jamMulai.format(context)} - ${request.jamSelesai.format(context)}";
 
-    // ✅ ambil muridUid
     final muridUid = request.muridUid;
 
     return Scaffold(
@@ -148,7 +107,6 @@ class DetailSiswaPage extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ================= FOTO + NAMA =================
                 Row(
                   children: [
                     const CircleAvatar(
@@ -177,10 +135,8 @@ class DetailSiswaPage extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 28),
 
-                // ================= CARD INFO =================
                 _InfoTile(
                   title: "Jumlah Siswa",
                   value: "${request.jumlahSiswa} Orang",
@@ -209,7 +165,6 @@ class DetailSiswaPage extends StatelessWidget {
 
                 const Spacer(),
 
-                // ✅ tombol Terima (UI kamu tetep sama)
                 if (showAcceptButton)
                   SizedBox(
                     width: double.infinity,
@@ -241,7 +196,6 @@ class DetailSiswaPage extends StatelessWidget {
   }
 }
 
-/// ================= INFO TILE =================
 class _InfoTile extends StatelessWidget {
   final String title;
   final String value;

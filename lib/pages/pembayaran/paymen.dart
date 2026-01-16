@@ -11,7 +11,7 @@ class QRPaymentPage extends StatelessWidget {
 
   final String bookingId;
   final String muridUid;
-  final String guruUid;
+  final String guruUid; // ✅ ini UID guru asli
 
   const QRPaymentPage({
     super.key,
@@ -24,13 +24,6 @@ class QRPaymentPage extends StatelessWidget {
     required this.guruUid,
   });
 
-  String safeKey(String input) {
-    return input
-        .trim()
-        .replaceAll(RegExp(r'[.#$\[\]]'), '')
-        .replaceAll(RegExp(r'\s+'), '_');
-  }
-
   Future<void> _markAsPaid(BuildContext context) async {
     try {
       final db = FirebaseDatabase.instanceFor(
@@ -38,28 +31,21 @@ class QRPaymentPage extends StatelessWidget {
         databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
       ).ref();
 
-      final safeGuruUid = safeKey(guruUid);
-
+      // 1) update booking murid jadi paid
       final bookingRef = db.child("bookings/$muridUid/$bookingId");
       await bookingRef.update({"status": "paid"});
 
-      // ✅ simpan request ke guru (paid)
-      final requestRef = db.child("requests_guru/$safeGuruUid/$bookingId");
+      // 2) kirim request ke guru (guruKey = UID)
+      final requestRef = db.child("requests_guru/$guruUid/$bookingId");
 
       final snap = await bookingRef.get();
       if (snap.exists) {
-        final data = snap.value as Map;
-
-        await requestRef.set({
-          ...Map<String, dynamic>.from(data),
-          "status": "paid",
-        });
+        await requestRef.set(snap.value);
       } else {
         await requestRef.set({
           "bookingId": bookingId,
           "muridUid": muridUid,
-          "muridNama": "Murid",
-          "guruUid": safeGuruUid,
+          "guruUid": guruUid,
           "guruNama": guru.nama,
           "mapel": guru.mapel,
           "tanggal":
@@ -72,12 +58,9 @@ class QRPaymentPage extends StatelessWidget {
         });
       }
 
-      // ❌ PENTING: JANGAN update saldo di sini
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Pembayaran berhasil ✅ (menunggu guru terima)"),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Pembayaran berhasil ✅")));
     } catch (e) {
       ScaffoldMessenger.of(
         context,

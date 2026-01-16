@@ -8,16 +8,7 @@ import 'package:ngelesin/pages/detail/detail_siswa.dart';
 import 'request_tile.dart';
 
 class RequestList extends StatelessWidget {
-  final String namaGuru;
-
-  const RequestList({super.key, required this.namaGuru});
-
-  String safeKey(String input) {
-    return input
-        .trim()
-        .replaceAll(RegExp(r'[.#$\[\]]'), '')
-        .replaceAll(RegExp(r'\s+'), '_');
-  }
+  const RequestList({super.key});
 
   TimeOfDay _parseTime(String time) {
     try {
@@ -43,19 +34,18 @@ class RequestList extends StatelessWidget {
 
   Future<Map<String, String>> _getMuridInfo(String uid) async {
     try {
-      if (uid.trim().isEmpty) return {"nama": "-", "alamat": "-"};
-
       final doc = await FirebaseFirestore.instance
           .collection("murid")
           .doc(uid)
           .get();
+
       if (!doc.exists) return {"nama": uid, "alamat": "-"};
 
       final data = doc.data() as Map<String, dynamic>;
-      final nama = (data["nama"] ?? uid).toString();
-      final alamat = (data["alamat"] ?? "-").toString();
-
-      return {"nama": nama, "alamat": alamat};
+      return {
+        "nama": (data["nama"] ?? uid).toString(),
+        "alamat": (data["alamat"] ?? "-").toString(),
+      };
     } catch (_) {
       return {"nama": uid, "alamat": "-"};
     }
@@ -63,7 +53,15 @@ class RequestList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final guruKey = safeKey(namaGuru);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text("Guru belum login", style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    final guruKey = user.uid;
 
     final db = FirebaseDatabase.instanceFor(
       app: FirebaseAuth.instance.app,
@@ -103,16 +101,19 @@ class RequestList extends StatelessWidget {
           );
         }
 
-        // ambil yang status paid saja
-        final entries = raw.entries.where((e) {
-          final v = e.value;
-          if (v is Map) {
-            return (v["status"] ?? "") == "paid";
+        final entries = raw.entries.toList();
+
+        // ✅ tampilkan request yg status == paid SAJA
+        final paidEntries = entries.where((e) {
+          final data = e.value;
+          if (data is Map) {
+            final status = (data["status"] ?? "").toString();
+            return status == "paid";
           }
           return false;
         }).toList();
 
-        if (entries.isEmpty) {
+        if (paidEntries.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(20),
             child: Text(
@@ -123,7 +124,7 @@ class RequestList extends StatelessWidget {
         }
 
         return Column(
-          children: entries.map((entry) {
+          children: paidEntries.map((entry) {
             final bookingId = entry.key.toString();
             final data = entry.value as Map;
 
@@ -146,11 +147,9 @@ class RequestList extends StatelessWidget {
 
             return FutureBuilder<Map<String, String>>(
               future: _getMuridInfo(muridUid),
-              builder: (context, muridSnap) {
-                final muridInfo =
-                    muridSnap.data ?? {"nama": muridUid, "alamat": "-"};
-                final namaSiswa = muridInfo["nama"] ?? muridUid;
-                final alamat = muridInfo["alamat"] ?? "-";
+              builder: (context, infoSnap) {
+                final namaSiswa = infoSnap.data?["nama"] ?? muridUid;
+                final alamat = infoSnap.data?["alamat"] ?? "-";
 
                 final request = TeachingRequest(
                   namaSiswa: namaSiswa,

@@ -14,18 +14,7 @@ class GuruHomeContent extends StatelessWidget {
 
   const GuruHomeContent({super.key, required this.namaGuru});
 
-  String _sanitize(String s) {
-    return s
-        .trim()
-        .replaceAll(RegExp(r"\s+"), "_")
-        .replaceAll(".", "")
-        .replaceAll(",", "")
-        .replaceAll("'", "")
-        .replaceAll('"', "");
-  }
-
   bool _isToday(String dateStr) {
-    // dateStr format: yyyy-MM-dd
     try {
       final now = DateTime.now();
       final todayStr =
@@ -84,23 +73,20 @@ class GuruHomeContent extends StatelessWidget {
       databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
     ).ref();
 
-    // ✅ guruKey harus SAMA dengan yang kamu pakai waktu bikin requests_guru
-    final guruKey = _sanitize(namaGuru);
-
-    final saldoRef = db.child("saldo_guru/$guruKey/saldo");
-    final requestRef = db.child("requests_guru/$guruKey");
+    // ✅ GURU KEY FINAL = UID (BIAR GA BERANTAK RTDB)
+    final guruKey = user.uid;
 
     return SafeArea(
       bottom: false,
       child: StreamBuilder<DatabaseEvent>(
-        stream: db.onValue, // 🔥 cukup 1 stream global biar aman
+        stream: db.onValue,
         builder: (context, snapshot) {
           int saldo = 0;
           int requestCount = 0;
           int sesiHariIni = 0;
 
           if (snapshot.hasData) {
-            // ambil saldo
+            // saldo
             final saldoSnap = snapshot.data!.snapshot.child(
               "saldo_guru/$guruKey/saldo",
             );
@@ -109,7 +95,7 @@ class GuruHomeContent extends StatelessWidget {
                 ? saldoVal
                 : int.tryParse("$saldoVal") ?? 0;
 
-            // ambil requests
+            // request
             final reqSnap = snapshot.data!.snapshot.child(
               "requests_guru/$guruKey",
             );
@@ -118,7 +104,6 @@ class GuruHomeContent extends StatelessWidget {
             if (reqVal is Map) {
               requestCount = reqVal.length;
 
-              // sesi hari ini = jumlah request paid yang tanggal hari ini
               for (final entry in reqVal.entries) {
                 final data = entry.value;
                 if (data is Map) {
@@ -136,11 +121,9 @@ class GuruHomeContent extends StatelessWidget {
             padding: EdgeInsets.only(bottom: bottomPadding),
             child: Column(
               children: [
-                // ================= HEADER =================
                 GuruHeader(namaGuru: namaGuru),
                 const SizedBox(height: 16),
 
-                // ================= SUMMARY =================
                 SummaryRow(
                   saldo: saldo,
                   sesiHariIni: sesiHariIni,
@@ -148,24 +131,19 @@ class GuruHomeContent extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 16),
-
-                // ================= AVAILABILITY =================
                 const AvailabilityCard(),
                 const SizedBox(height: 16),
-
-                // ================= SEARCH =================
                 const GuruSearchInput(),
                 const SizedBox(height: 16),
 
-                // ================= SECTION =================
                 const SectionHeader(
                   title: "Permintaan Mengajar",
                   subtitle: "",
                   roleLabel: "Guru",
                 ),
 
-                // ✅ request list sekarang ambil dari RTDB juga
-                RequestList(namaGuru: namaGuru),
+                // ✅ FIX: RequestList TANPA PARAMETER
+                const RequestList(),
 
                 const SizedBox(height: 24),
               ],
