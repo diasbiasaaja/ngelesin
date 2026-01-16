@@ -48,10 +48,10 @@ class _EditAddressPageState extends State<EditAddressPage> {
         return;
       }
 
-      // cek guru dulu
+      // ✅ cek guru dulu
       final guruDoc = await _firestore.collection("guru").doc(uid).get();
       if (guruDoc.exists) {
-        final data = guruDoc.data()!;
+        final data = guruDoc.data() ?? {};
         setState(() {
           role = "guru";
           jalanC.text = (data["jalan"] ?? "").toString();
@@ -64,12 +64,12 @@ class _EditAddressPageState extends State<EditAddressPage> {
         return;
       }
 
-      // cek siswa
-      final siswaDoc = await _firestore.collection("siswa").doc(uid).get();
-      if (siswaDoc.exists) {
-        final data = siswaDoc.data()!;
+      // ✅ cek murid (pakai "murid", bukan "siswa" biar konsisten)
+      final muridDoc = await _firestore.collection("murid").doc(uid).get();
+      if (muridDoc.exists) {
+        final data = muridDoc.data() ?? {};
         setState(() {
-          role = "siswa";
+          role = "murid";
           jalanC.text = (data["jalan"] ?? "").toString();
           desaC.text = (data["desa"] ?? "").toString();
           kecC.text = (data["kecamatan"] ?? "").toString();
@@ -80,7 +80,11 @@ class _EditAddressPageState extends State<EditAddressPage> {
         return;
       }
 
-      setState(() => isLoading = false);
+      // ✅ kalau murid doc belum ada sama sekali
+      setState(() {
+        role = "murid";
+        isLoading = false;
+      });
     } catch (e) {
       setState(() => isLoading = false);
     }
@@ -91,19 +95,23 @@ class _EditAddressPageState extends State<EditAddressPage> {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
-    final col = role == "guru" ? "guru" : "siswa";
+    final col = role == "guru" ? "guru" : "murid";
 
     final alamatFull =
-        "${jalanC.text}, ${desaC.text}, ${kecC.text}, RT/RW ${rtC.text}, No ${rumahC.text}";
+        "${jalanC.text.trim()}, ${desaC.text.trim()}, ${kecC.text.trim()}, RT/RW ${rtC.text.trim()}, No ${rumahC.text.trim()}";
 
-    await _firestore.collection(col).doc(uid).update({
+    // ✅ FIX UNIVERSAL:
+    // - Guru: doc sudah ada -> update field
+    // - Murid: doc bisa belum ada -> dibuat otomatis
+    await _firestore.collection(col).doc(uid).set({
       "alamat": alamatFull,
       "jalan": jalanC.text.trim(),
       "desa": desaC.text.trim(),
       "kecamatan": kecC.text.trim(),
       "rt_rw": rtC.text.trim(),
       "no_rumah": rumahC.text.trim(),
-    });
+      "updatedAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -156,6 +164,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
                           ),
                           onPressed: () async {
                             await _saveAlamat();
+                            if (!mounted) return;
                             Navigator.pop(context);
                           },
                           child: const Text(

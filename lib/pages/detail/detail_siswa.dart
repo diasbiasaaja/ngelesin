@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -8,18 +9,16 @@ import '../../../models/teaching_request.dart';
 class DetailSiswaPage extends StatelessWidget {
   final TeachingRequest request;
   final bool showAcceptButton;
-
-  // ✅ TAMBAHAN biar gak error & konsisten key
   final String guruNama;
 
   const DetailSiswaPage({
     super.key,
     required this.request,
-    required this.guruNama,
     this.showAcceptButton = false,
+    required this.guruNama,
   });
 
-  // ✅ sanitize key untuk RTDB path
+  // ✅ safe key RTDB
   String safeKey(String input) {
     return input
         .trim()
@@ -27,9 +26,14 @@ class DetailSiswaPage extends StatelessWidget {
         .replaceAll(RegExp(r'\s+'), '_');
   }
 
+  // ✅ ACCEPT REQUEST
   Future<void> _acceptRequest(BuildContext context) async {
     try {
-      final guruKey = safeKey(guruNama);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception("Guru belum login");
+
+      // ✅ guruKey harus konsisten dengan yang di RequestList & HomeContent
+      final guruKey = safeKey(guruNama.isNotEmpty ? guruNama : user.uid);
 
       final db = FirebaseDatabase.instanceFor(
         app: FirebaseAuth.instance.app,
@@ -37,44 +41,67 @@ class DetailSiswaPage extends StatelessWidget {
       ).ref();
 
       final bookingId = request.bookingId;
-      final muridUid = request.muridUid;
       final totalHarga = request.harga;
 
-      if (bookingId.isEmpty || muridUid.isEmpty) {
-        throw Exception("bookingId/muridUid kosong");
-      }
+      if (bookingId.isEmpty) throw Exception("bookingId kosong");
 
-      // ✅ 1) update status di request guru jadi accepted
-      final reqRef = db.child("requests_guru/$guruKey/$bookingId");
-      await reqRef.update({"status": "accepted"});
+      // =======================
+      // 1) UPDATE STATUS REQUEST
+      // =======================
+      final requestRef = db.child("requests_guru/$guruKey/$bookingId");
+      await requestRef.update({"status": "accepted"});
 
-      // ✅ 2) update booking murid juga jadi accepted
-      final bookingRef = db.child("bookings/$muridUid/$bookingId");
-      await bookingRef.update({"status": "accepted"});
+      // =======================
+      // 2) PINDAHIN KE JADWAL
+      // =======================
+      final jadwalRef = db.child("jadwal_guru/$guruKey/$bookingId");
+      final snap = await requestRef.get();
 
-      // ✅ 3) saldo guru baru bertambah saat accepted
-      final saldoRef = db.child("saldo_guru/$guruKey/saldo");
-      await saldoRef.runTransaction((current) {
-        final cur = (current as int?) ?? 0;
-        return Transaction.success(cur + totalHarga);
-      });
-
-      // ✅ 4) masuk sesi hari ini (optional)
-      final sesiRef = db.child("guru_hari_ini/$guruKey/$bookingId");
-      final snap = await reqRef.get();
       if (snap.exists) {
-        await sesiRef.set(snap.value);
+        await jadwalRef.set(snap.value);
+      } else {
+        await jadwalRef.set({
+          "bookingId": bookingId,
+          "muridUid": request.muridUid,
+          "mapel": request.mapel,
+          "tanggal":
+              "${request.tanggal.year}-${request.tanggal.month.toString().padLeft(2, '0')}-${request.tanggal.day.toString().padLeft(2, '0')}",
+          "jam":
+              "${request.jamMulai.hour.toString().padLeft(2, '0')}:${request.jamMulai.minute.toString().padLeft(2, '0')}",
+          "totalHarga": totalHarga,
+          "status": "accepted",
+          "createdAt": ServerValue.timestamp,
+        });
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request diterima ✅ Saldo bertambah")),
-      );
+      // =======================
+      // 3) SALDO MASUK SAAT ACCEPTED
+      // =======================
+      final saldoRef = db.child("saldo_guru/$guruKey/saldo");
+
+      final snapSaldo = await saldoRef.get();
+      final cur = (snapSaldo.value is int)
+          ? snapSaldo.value as int
+          : int.tryParse("${snapSaldo.value}") ?? 0;
+
+      await saldoRef.set(cur + totalHarga);
+
+      // =======================
+      // 4) OPTIONAL: HILANGKAN DARI LIST REQUEST PAID
+      // (kalau kamu masih filter paid doang, ini otomatis hilang,
+      // tapi biar rapi juga bisa hapus)
+      // =======================
+      // await requestRef.remove();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Request diterima ✅")));
 
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Gagal menerima: $e")));
+      ).showSnackBar(SnackBar(content: Text("Gagal terima request: $e")));
     }
   }
 
@@ -83,9 +110,11 @@ class DetailSiswaPage extends StatelessWidget {
     final tanggalFormatted = DateFormat(
       'dd / MM / yyyy',
     ).format(request.tanggal);
-
     final jamFormatted =
         "${request.jamMulai.format(context)} - ${request.jamSelesai.format(context)}";
+
+    // ✅ ambil muridUid
+    final muridUid = request.muridUid;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -97,94 +126,122 @@ class DetailSiswaPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ================= FOTO + NAMA =================
-            Row(
+        child: FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection("murid")
+              .doc(muridUid)
+              .get(),
+          builder: (context, snapshot) {
+            String namaSiswa = request.namaSiswa.isNotEmpty
+                ? request.namaSiswa
+                : "-";
+            String alamat = request.alamat.isNotEmpty ? request.alamat : "-";
+
+            if (snapshot.hasData &&
+                snapshot.data != null &&
+                snapshot.data!.exists) {
+              final data = snapshot.data!.data() as Map<String, dynamic>;
+              namaSiswa = (data["nama"] ?? namaSiswa).toString();
+              alamat = (data["alamat"] ?? alamat).toString();
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  radius: 36,
-                  backgroundImage: AssetImage("assets/images/user_dummy.png"),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // ================= FOTO + NAMA =================
+                Row(
                   children: [
-                    Text(
-                      request.namaSiswa,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    const CircleAvatar(
+                      radius: 36,
+                      backgroundImage: AssetImage(
+                        "assets/images/user_dummy.png",
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "${request.mapel} • ${request.jarak}",
-                      style: const TextStyle(color: Colors.grey),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          namaSiswa,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "${request.mapel} • ${request.jarak}",
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
 
-            const SizedBox(height: 28),
+                const SizedBox(height: 28),
 
-            _InfoTile(
-              title: "Jumlah Siswa",
-              value: "${request.jumlahSiswa} Orang",
-              icon: Icons.people,
-            ),
-            _InfoTile(
-              title: "Tanggal Booking",
-              value: tanggalFormatted,
-              icon: Icons.calendar_today,
-            ),
-            _InfoTile(
-              title: "Jam Belajar",
-              value: jamFormatted,
-              icon: Icons.schedule,
-            ),
-            _InfoTile(
-              title: "Alamat",
-              value: request.alamat,
-              icon: Icons.location_on,
-            ),
-            _InfoTile(
-              title: "Harga",
-              value: "Rp ${request.harga} / sesi",
-              icon: Icons.payments,
-            ),
+                // ================= CARD INFO =================
+                _InfoTile(
+                  title: "Jumlah Siswa",
+                  value: "${request.jumlahSiswa} Orang",
+                  icon: Icons.people,
+                ),
+                _InfoTile(
+                  title: "Tanggal Booking",
+                  value: tanggalFormatted,
+                  icon: Icons.calendar_today,
+                ),
+                _InfoTile(
+                  title: "Jam Belajar",
+                  value: jamFormatted,
+                  icon: Icons.schedule,
+                ),
+                _InfoTile(
+                  title: "Alamat",
+                  value: alamat,
+                  icon: Icons.location_on,
+                ),
+                _InfoTile(
+                  title: "Harga",
+                  value: "Rp ${request.harga} / sesi",
+                  icon: Icons.payments,
+                ),
 
-            const Spacer(),
+                const Spacer(),
 
-            // ================= BUTTON TERIMA =================
-            if (showAcceptButton)
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                // ✅ tombol Terima (UI kamu tetep sama)
+                if (showAcceptButton)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () => _acceptRequest(context),
+                      child: const Text(
+                        "Terima",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
-                  onPressed: () => _acceptRequest(context),
-                  child: const Text(
-                    "Terima",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ),
-              ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
+/// ================= INFO TILE =================
 class _InfoTile extends StatelessWidget {
   final String title;
   final String value;
