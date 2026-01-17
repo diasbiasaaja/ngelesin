@@ -1,10 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 const navy = Color(0xFF0A2A43);
 const yellowAcc = Color(0xFFFFC947);
 
 class MateriUploadPage extends StatefulWidget {
-  const MateriUploadPage({super.key});
+  final String bookingId;
+  final String muridUid;
+  final String guruUid;
+  final String mapel;
+  final String muridNama;
+  final String tanggal;
+  final String jam;
+
+  const MateriUploadPage({
+    super.key,
+    required this.bookingId,
+    required this.muridUid,
+    required this.guruUid,
+    required this.mapel,
+    required this.muridNama,
+    required this.tanggal,
+    required this.jam,
+  });
 
   @override
   State<MateriUploadPage> createState() => _MateriUploadPageState();
@@ -13,8 +31,69 @@ class MateriUploadPage extends StatefulWidget {
 class _MateriUploadPageState extends State<MateriUploadPage> {
   final TextEditingController judulController = TextEditingController();
   final TextEditingController deskripsiController = TextEditingController();
+  final TextEditingController linkController = TextEditingController();
 
-  String? fileName;
+  bool loading = false;
+
+  bool _isValidUrl(String url) {
+    final uri = Uri.tryParse(url);
+    return uri != null && (uri.isScheme("http") || uri.isScheme("https"));
+  }
+
+  Future<void> _saveMateri() async {
+    final judul = judulController.text.trim();
+    final deskripsi = deskripsiController.text.trim();
+    final link = linkController.text.trim();
+
+    if (judul.isEmpty || link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Judul dan Link wajib diisi")),
+      );
+      return;
+    }
+
+    if (!_isValidUrl(link)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Link tidak valid (harus http/https)")),
+      );
+      return;
+    }
+
+    setState(() => loading = true);
+
+    try {
+      // ✅ 1) simpan ke Firestore
+      // materi/{bookingId}/items/{autoId}
+      final materiRef = FirebaseFirestore.instance
+          .collection("materi")
+          .doc(widget.bookingId)
+          .collection("items");
+
+      await materiRef.add({
+        "bookingId": widget.bookingId,
+        "guruUid": widget.guruUid,
+        "muridUid": widget.muridUid,
+        "mapel": widget.mapel,
+        "muridNama": widget.muridNama,
+        "judul": judul,
+        "deskripsi": deskripsi,
+        "link": link,
+        "createdAt": FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Materi berhasil dikirim ✅")),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal simpan materi: $e")));
+    } finally {
+      setState(() => loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +116,17 @@ class _MateriUploadPageState extends State<MateriUploadPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              "${widget.mapel} - ${widget.muridNama}",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "${widget.tanggal} • ${widget.jam}",
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+
             // ===== JUDUL =====
             const Text(
               "Judul Materi",
@@ -80,40 +170,21 @@ class _MateriUploadPageState extends State<MateriUploadPage> {
 
             const SizedBox(height: 20),
 
-            // ===== UPLOAD FILE =====
+            // ✅ LINK MATERI
             const Text(
-              "File Materi",
+              "Link Materi",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-
-            GestureDetector(
-              onTap: () {
-                // 🔹 dummy upload (nanti ganti file_picker)
-                setState(() {
-                  fileName = "materi_matematika.pdf";
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+            TextField(
+              controller: linkController,
+              decoration: InputDecoration(
+                hintText: "https://drive.google.com/... / youtube / pdf link",
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: navy.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.upload_file, color: navy),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        fileName ?? "Pilih file (PDF / PPT)",
-                        style: TextStyle(
-                          color: fileName == null ? Colors.grey : Colors.black,
-                        ),
-                      ),
-                    ),
-                  ],
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
@@ -131,21 +202,16 @@ class _MateriUploadPageState extends State<MateriUploadPage> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-                onPressed: () {
-                  // nanti kirim ke backend
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Materi berhasil disimpan (dummy)"),
-                    ),
-                  );
-                },
-                child: const Text(
-                  "Simpan Materi",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                onPressed: loading ? null : _saveMateri,
+                child: loading
+                    ? const CircularProgressIndicator()
+                    : const Text(
+                        "Kirim Materi",
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
