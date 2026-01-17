@@ -33,15 +33,17 @@ class GuruListPage extends StatelessWidget {
     return double.tryParse(v.toString()) ?? 0.0;
   }
 
-  Guru _toGuru(Map<String, dynamic> data) {
+  Guru _toGuru(String docId, Map<String, dynamic> data) {
     return Guru(
+      uid: docId,
       nama: (data["nama"] ?? "-").toString(),
       mapel: "$jenjang $mapel",
       bio: (data["bio"] ?? "").toString(),
       fotoUrl: (data["foto_url"] ?? "assets/images/user_dummy.png").toString(),
 
-      rating: _toDouble(data["rating"]),
-      totalUlasan: _toInt(data["total_ulasan"]),
+      // ✅ FIX key sesuai Firestore kamu
+      rating: _toDouble(data["rating_avg"]),
+      totalUlasan: _toInt(data["rating_count"]),
 
       jarakKm: _toDouble(data["jarak_km"]),
       hargaPerJam: _toInt(data["harga_per_jam"]),
@@ -54,7 +56,6 @@ class GuruListPage extends StatelessWidget {
           : null,
 
       ulasan: [],
-      uid: data["uid"] ?? '',
     );
   }
 
@@ -87,7 +88,7 @@ class GuruListPage extends StatelessWidget {
             );
           }
 
-          final gurus = docs.map((d) => _toGuru(d.data())).toList();
+          final gurus = docs.map((d) => _toGuru(d.id, d.data())).toList();
 
           return ListView(
             padding: const EdgeInsets.all(20),

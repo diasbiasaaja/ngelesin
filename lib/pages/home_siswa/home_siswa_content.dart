@@ -9,6 +9,8 @@ import 'widgets/jadwal.dart';
 
 import '../guru_list/guru_list_page.dart';
 
+import '../detail/detail_guru_booked_page.dart';
+
 class HomeSiswaContent extends StatefulWidget {
   const HomeSiswaContent({super.key});
 
@@ -157,7 +159,6 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
               StreamBuilder<DatabaseEvent>(
                 stream: bookingRef.onValue,
                 builder: (context, snapshot) {
-                  // loading
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return _jadwalKosongUI(
                       jadwalKey: jadwalKey,
@@ -167,7 +168,6 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                     );
                   }
 
-                  // kosong
                   if (!snapshot.hasData ||
                       snapshot.data!.snapshot.value == null) {
                     return _jadwalKosongUI(
@@ -192,18 +192,20 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
 
                   // ✅ convert Map ke List booking
                   final allBookings = raw.entries.map((e) {
-                    final data = (e.value as Map);
+                    final data = Map<String, dynamic>.from(e.value as Map);
 
                     final status = (data["status"] ?? "").toString();
                     final guruNama = (data["guruNama"] ?? "-").toString();
+                    final guruUid = (data["guruUid"] ?? "").toString();
                     final mapel = (data["mapel"] ?? "-").toString();
                     final jam = (data["jam"] ?? "-").toString();
                     final tanggalStr = (data["tanggal"] ?? "").toString();
 
                     return {
-                      "id": e.key.toString(),
+                      "id": e.key.toString(), // bookingId
                       "status": status,
                       "guruNama": guruNama,
+                      "guruUid": guruUid,
                       "mapel": mapel,
                       "jam": jam,
                       "tanggal": tanggalStr,
@@ -213,7 +215,7 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
 
                   // ✅ tampilkan hanya accepted
                   final accepted = allBookings
-                      .where((b) => b["status"] == "accepted")
+                      .where((b) => (b["status"] ?? "") == "accepted")
                       .toList();
 
                   // ✅ filter jadwal hari ini
@@ -255,12 +257,28 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                         Column(
                           key: jadwalKey,
                           children: todayDocs.map((b) {
+                            final guruNama = (b["guruNama"] ?? "-").toString();
+                            final mapel = (b["mapel"] ?? "-").toString();
+                            final jam = (b["jam"] ?? "-").toString();
+                            final guruUid = (b["guruUid"] ?? "").toString();
+                            final bookingId = (b["id"] ?? "").toString();
+
                             return JadwalGuruCard(
-                              namaGuru: b["guruNama"].toString(),
-                              mapel: b["mapel"].toString(),
-                              jam: b["jam"].toString(),
+                              namaGuru: guruNama,
+                              mapel: mapel,
+                              jam: jam,
                               onDetail: () {
-                                debugPrint("DETAIL BOOKING ID: ${b["id"]}");
+                                debugPrint("DETAIL BOOKING: $bookingId");
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => DetailGuruBookedPage(
+                                      guruUid: guruUid,
+                                      bookingId: bookingId,
+                                    ),
+                                  ),
+                                );
                               },
                             );
                           }).toList(),
@@ -299,8 +317,8 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                       if (showRiwayat)
                         Column(
                           children: historyDocs.isEmpty
-                              ? [
-                                  const Padding(
+                              ? const [
+                                  Padding(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 20,
                                     ),
@@ -311,14 +329,19 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                                   ),
                                 ]
                               : historyDocs.take(10).map((b) {
+                                  final guruNama = (b["guruNama"] ?? "-")
+                                      .toString();
+                                  final mapel = (b["mapel"] ?? "-").toString();
+                                  final jam = (b["jam"] ?? "-").toString();
+                                  final bookingId = (b["id"] ?? "").toString();
+
                                   return JadwalGuruCard(
-                                    namaGuru: b["guruNama"].toString(),
-                                    mapel: b["mapel"].toString(),
-                                    jam: b["jam"].toString(),
+                                    namaGuru: guruNama,
+                                    mapel: mapel,
+                                    jam: jam,
                                     onDetail: () {
-                                      debugPrint(
-                                        "RIWAYAT BOOKING ID: ${b["id"]}",
-                                      );
+                                      debugPrint("DETAIL RIWAYAT: $bookingId");
+                                      // TODO: sama kayak di atas
                                     },
                                   );
                                 }).toList(),
@@ -335,7 +358,7 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
     );
   }
 
-  /// UI jadwal kosong (UX sama kayak punyamu)
+  /// UI jadwal kosong
   Widget _jadwalKosongUI({
     required GlobalKey jadwalKey,
     required bool showRiwayat,
