@@ -30,13 +30,6 @@ class _BookingPageState extends State<BookingPage> {
 
   String selectedHargaType = "single"; // single | group1_5 | group6_10
 
-  String safeKey(String input) {
-    return input
-        .trim()
-        .replaceAll(RegExp(r'[.#$\[\]]'), '')
-        .replaceAll(RegExp(r'\s+'), '_');
-  }
-
   Future<void> pickDate() async {
     final date = await showDatePicker(
       context: context,
@@ -74,21 +67,21 @@ class _BookingPageState extends State<BookingPage> {
   }
 
   Future<Map<String, dynamic>> _getMuridData(String uid) async {
-    // ✅ ambil dari Firestore collection murid (sesuai screenshot kamu)
     final doc = await FirebaseFirestore.instance
         .collection("murid")
         .doc(uid)
         .get();
     if (!doc.exists) return {"nama": uid};
-
     final data = doc.data() ?? {};
     return {
       "nama": (data["nama"] ?? uid).toString(),
       "email": (data["email"] ?? "").toString(),
       "pendidikan": (data["pendidikan"] ?? "").toString(),
+      "alamat": (data["alamat"] ?? "-").toString(),
     };
   }
 
+  // ✅ CREATE BOOKING (status pending)
   Future<String?> _createBookingRTDB({
     required int totalHarga,
     required String hargaType,
@@ -99,22 +92,22 @@ class _BookingPageState extends State<BookingPage> {
     try {
       final guru = widget.guru;
 
-      final bookingRef = _db.child("bookings").child(muridUid).push();
+      final bookingRef = _db.child("bookings/$muridUid").push();
       final bookingId = bookingRef.key;
       if (bookingId == null) return null;
 
       await bookingRef.set({
         "bookingId": bookingId,
         "muridUid": muridUid,
-        "muridNama": muridNama, // ✅ biar request tampil nama
-        "guruUid": guruUid,
+        "muridNama": muridNama,
+        "guruUid": guruUid, // ✅ UID ASLI GURU
         "guruNama": guru.nama,
         "mapel": guru.mapel,
         "tanggal": _formatDate(selectedDate!),
         "jam": _formatTime(selectedTime!),
         "hargaType": hargaType,
         "totalHarga": totalHarga,
-        "status": "pending", // pending -> paid -> accepted -> selesai
+        "status": "pending",
         "createdAt": ServerValue.timestamp,
       });
 
@@ -337,8 +330,8 @@ class _BookingPageState extends State<BookingPage> {
                       return;
                     }
 
-                    // ✅ guruUid dibuat dari nama guru
-                    final guruUid = safeKey(guru.nama);
+                    // ✅ FIX TOTAL: guruUid pakai UID ASLI guru dari firestore
+                    final guruUid = guru.uid;
 
                     final muridData = await _getMuridData(muridUid);
                     final muridNama = muridData["nama"].toString();

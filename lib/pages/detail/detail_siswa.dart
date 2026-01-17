@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -14,7 +13,6 @@ class DetailSiswaPage extends StatelessWidget {
     super.key,
     required this.request,
     this.showAcceptButton = false,
-    required String guruNama,
   });
 
   Future<void> _acceptRequest(BuildContext context) async {
@@ -22,7 +20,7 @@ class DetailSiswaPage extends StatelessWidget {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("Guru belum login");
 
-      final guruKey = user.uid;
+      final guruUid = user.uid;
 
       final db = FirebaseDatabase.instanceFor(
         app: FirebaseAuth.instance.app,
@@ -31,27 +29,28 @@ class DetailSiswaPage extends StatelessWidget {
 
       final bookingId = request.bookingId;
       final totalHarga = request.harga;
-
       if (bookingId.isEmpty) throw Exception("bookingId kosong");
 
       // ✅ 1) update status -> accepted
-      final requestRef = db.child("requests_guru/$guruKey/$bookingId");
+      final requestRef = db.child("requests_guru/$guruUid/$bookingId");
       await requestRef.update({"status": "accepted"});
 
-      // ✅ 2) pindah ke jadwal_guru
-      final jadwalRef = db.child("jadwal_guru/$guruKey/$bookingId");
+      // ✅ 2) copy request -> jadwal_guru
+      final jadwalRef = db.child("jadwal_guru/$guruUid/$bookingId");
       final snap = await requestRef.get();
       if (snap.exists) {
         await jadwalRef.set(snap.value);
       }
 
-      // ✅ 3) tambah saldo pas accepted (WEB AMAN)
-      final saldoRef = db.child("saldo_guru/$guruKey/saldo");
-
+      // ✅ 3) saldo masuk pas accept
+      final saldoRef = db.child("saldo_guru/$guruUid/saldo");
       await saldoRef.runTransaction((Object? current) {
         final cur = (current is int) ? current : int.tryParse("$current") ?? 0;
         return Transaction.success(cur + totalHarga);
       });
+
+      // ✅ 4) HAPUS request biar ilang dari list paid
+      await requestRef.remove();
 
       ScaffoldMessenger.of(
         context,
@@ -73,8 +72,6 @@ class DetailSiswaPage extends StatelessWidget {
     final jamFormatted =
         "${request.jamMulai.format(context)} - ${request.jamSelesai.format(context)}";
 
-    final muridUid = request.muridUid;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -85,111 +82,87 @@ class DetailSiswaPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance
-              .collection("murid")
-              .doc(muridUid)
-              .get(),
-          builder: (context, snapshot) {
-            String namaSiswa = request.namaSiswa.isNotEmpty
-                ? request.namaSiswa
-                : "-";
-            String alamat = request.alamat.isNotEmpty ? request.alamat : "-";
-
-            if (snapshot.hasData &&
-                snapshot.data != null &&
-                snapshot.data!.exists) {
-              final data = snapshot.data!.data() as Map<String, dynamic>;
-              namaSiswa = (data["nama"] ?? namaSiswa).toString();
-              alamat = (data["alamat"] ?? alamat).toString();
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // FOTO + NAMA
+            Row(
               children: [
-                Row(
+                const CircleAvatar(
+                  radius: 36,
+                  backgroundImage: AssetImage("assets/images/user_dummy.png"),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CircleAvatar(
-                      radius: 36,
-                      backgroundImage: AssetImage(
-                        "assets/images/user_dummy.png",
+                    Text(
+                      request.namaSiswa,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          namaSiswa,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "${request.mapel} • ${request.jarak}",
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      "${request.mapel} • ${request.jarak}",
+                      style: const TextStyle(color: Colors.grey),
                     ),
                   ],
                 ),
-                const SizedBox(height: 28),
+              ],
+            ),
 
-                _InfoTile(
-                  title: "Jumlah Siswa",
-                  value: "${request.jumlahSiswa} Orang",
-                  icon: Icons.people,
-                ),
-                _InfoTile(
-                  title: "Tanggal Booking",
-                  value: tanggalFormatted,
-                  icon: Icons.calendar_today,
-                ),
-                _InfoTile(
-                  title: "Jam Belajar",
-                  value: jamFormatted,
-                  icon: Icons.schedule,
-                ),
-                _InfoTile(
-                  title: "Alamat",
-                  value: alamat,
-                  icon: Icons.location_on,
-                ),
-                _InfoTile(
-                  title: "Harga",
-                  value: "Rp ${request.harga} / sesi",
-                  icon: Icons.payments,
-                ),
+            const SizedBox(height: 28),
 
-                const Spacer(),
+            _InfoTile(
+              title: "Jumlah Siswa",
+              value: "${request.jumlahSiswa} Orang",
+              icon: Icons.people,
+            ),
+            _InfoTile(
+              title: "Tanggal Booking",
+              value: tanggalFormatted,
+              icon: Icons.calendar_today,
+            ),
+            _InfoTile(
+              title: "Jam Belajar",
+              value: jamFormatted,
+              icon: Icons.schedule,
+            ),
+            _InfoTile(
+              title: "Alamat",
+              value: request.alamat,
+              icon: Icons.location_on,
+            ),
+            _InfoTile(
+              title: "Harga",
+              value: "Rp ${request.harga} / sesi",
+              icon: Icons.payments,
+            ),
 
-                if (showAcceptButton)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      onPressed: () => _acceptRequest(context),
-                      child: const Text(
-                        "Terima",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+            const Spacer(),
+
+            if (showAcceptButton)
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-              ],
-            );
-          },
+                  onPressed: () => _acceptRequest(context),
+                  child: const Text(
+                    "Terima",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

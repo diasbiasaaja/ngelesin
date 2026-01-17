@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../models/guru_model.dart';
 
@@ -11,7 +12,7 @@ class QRPaymentPage extends StatelessWidget {
 
   final String bookingId;
   final String muridUid;
-  final String guruUid; // ✅ ini UID guru asli
+  final String guruUid;
 
   const QRPaymentPage({
     super.key,
@@ -24,6 +25,24 @@ class QRPaymentPage extends StatelessWidget {
     required this.guruUid,
   });
 
+  Future<Map<String, dynamic>> _getMuridInfo(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection("murid")
+          .doc(uid)
+          .get();
+      if (!doc.exists) return {"nama": uid, "alamat": "-"};
+
+      final data = doc.data() ?? {};
+      return {
+        "nama": (data["nama"] ?? uid).toString(),
+        "alamat": (data["alamat"] ?? "-").toString(),
+      };
+    } catch (_) {
+      return {"nama": uid, "alamat": "-"};
+    }
+  }
+
   Future<void> _markAsPaid(BuildContext context) async {
     try {
       final db = FirebaseDatabase.instanceFor(
@@ -31,11 +50,21 @@ class QRPaymentPage extends StatelessWidget {
         databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
       ).ref();
 
+      // ✅ ambil nama & alamat murid dari Firestore
+      final muridInfo = await _getMuridInfo(muridUid);
+      final muridNama = muridInfo["nama"].toString();
+      final alamat = muridInfo["alamat"].toString();
+
       // 1) update booking murid jadi paid
       final bookingRef = db.child("bookings/$muridUid/$bookingId");
-      await bookingRef.update({"status": "paid"});
 
-      // 2) kirim request ke guru (guruKey = UID)
+      await bookingRef.update({
+        "status": "paid",
+        "muridNama": muridNama,
+        "alamat": alamat,
+      });
+
+      // 2) kirim request ke guru
       final requestRef = db.child("requests_guru/$guruUid/$bookingId");
 
       final snap = await bookingRef.get();
@@ -45,6 +74,8 @@ class QRPaymentPage extends StatelessWidget {
         await requestRef.set({
           "bookingId": bookingId,
           "muridUid": muridUid,
+          "muridNama": muridNama,
+          "alamat": alamat,
           "guruUid": guruUid,
           "guruNama": guru.nama,
           "mapel": guru.mapel,

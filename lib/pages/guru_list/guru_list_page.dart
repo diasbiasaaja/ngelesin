@@ -54,6 +54,7 @@ class GuruListPage extends StatelessWidget {
           : null,
 
       ulasan: [],
+      uid: data["uid"] ?? '',
     );
   }
 

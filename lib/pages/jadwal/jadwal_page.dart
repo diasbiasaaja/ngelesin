@@ -251,7 +251,6 @@ class _JadwalTile extends StatelessWidget {
             builder: (_) => DetailSiswaPage(
               request: request,
               showAcceptButton: false, // ✅ jadwal sudah accepted
-              guruNama: "",
             ),
           ),
         );

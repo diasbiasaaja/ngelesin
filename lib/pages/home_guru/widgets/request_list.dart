@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:ngelesin/models/teaching_request.dart';
 import 'package:ngelesin/pages/detail/detail_siswa.dart';
@@ -32,25 +31,6 @@ class RequestList extends StatelessWidget {
     }
   }
 
-  Future<Map<String, String>> _getMuridInfo(String uid) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection("murid")
-          .doc(uid)
-          .get();
-
-      if (!doc.exists) return {"nama": uid, "alamat": "-"};
-
-      final data = doc.data() as Map<String, dynamic>;
-      return {
-        "nama": (data["nama"] ?? uid).toString(),
-        "alamat": (data["alamat"] ?? "-").toString(),
-      };
-    } catch (_) {
-      return {"nama": uid, "alamat": "-"};
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -61,14 +41,14 @@ class RequestList extends StatelessWidget {
       );
     }
 
-    final guruKey = user.uid;
+    final guruUid = user.uid;
 
     final db = FirebaseDatabase.instanceFor(
       app: FirebaseAuth.instance.app,
       databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
     ).ref();
 
-    final requestRef = db.child("requests_guru/$guruKey");
+    final requestRef = db.child("requests_guru/$guruUid");
 
     return StreamBuilder<DatabaseEvent>(
       stream: requestRef.onValue,
@@ -103,12 +83,11 @@ class RequestList extends StatelessWidget {
 
         final entries = raw.entries.toList();
 
-        // ✅ tampilkan request yg status == paid SAJA
+        // ✅ tampilkan hanya request PAID (belum accepted)
         final paidEntries = entries.where((e) {
           final data = e.value;
           if (data is Map) {
-            final status = (data["status"] ?? "").toString();
-            return status == "paid";
+            return (data["status"] ?? "").toString() == "paid";
           }
           return false;
         }).toList();
@@ -129,6 +108,9 @@ class RequestList extends StatelessWidget {
             final data = entry.value as Map;
 
             final muridUid = (data["muridUid"] ?? "").toString();
+            final muridNama = (data["muridNama"] ?? "Murid").toString();
+            final alamat = (data["alamat"] ?? "-").toString();
+
             final mapel = (data["mapel"] ?? "").toString();
             final tanggalStr = (data["tanggal"] ?? "").toString();
             final jamStr = (data["jam"] ?? "00:00").toString();
@@ -145,43 +127,34 @@ class RequestList extends StatelessWidget {
               minute: jamMulai.minute,
             );
 
-            return FutureBuilder<Map<String, String>>(
-              future: _getMuridInfo(muridUid),
-              builder: (context, infoSnap) {
-                final namaSiswa = infoSnap.data?["nama"] ?? muridUid;
-                final alamat = infoSnap.data?["alamat"] ?? "-";
+            final request = TeachingRequest(
+              namaSiswa: muridNama,
+              mapel: mapel,
+              alamat: alamat,
+              jarak: "-",
+              harga: harga,
+              jumlahSiswa: 1,
+              tanggal: tgl,
+              jamMulai: jamMulai,
+              jamSelesai: jamSelesai,
+              bookingId: bookingId,
+              muridUid: muridUid,
+              fotoUrl: "",
+            );
 
-                final request = TeachingRequest(
-                  namaSiswa: namaSiswa,
-                  mapel: mapel,
-                  alamat: alamat,
-                  jarak: "-",
-                  harga: harga,
-                  jumlahSiswa: 1,
-                  tanggal: tgl,
-                  jamMulai: jamMulai,
-                  jamSelesai: jamSelesai,
-                  bookingId: bookingId,
-                  muridUid: muridUid,
-                  fotoUrl: "",
-                );
-
-                return RequestTile(
-                  title: "$mapel - $namaSiswa",
-                  subtitle: "$tanggalStr • ${jamMulai.format(context)}",
-                  price: "Rp $harga / sesi",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DetailSiswaPage(
-                          request: request,
-                          showAcceptButton: true,
-                          guruNama: '',
-                        ),
-                      ),
-                    );
-                  },
+            return RequestTile(
+              title: "$mapel - $muridNama",
+              subtitle: "$tanggalStr • ${jamMulai.format(context)}",
+              price: "Rp $harga / sesi",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DetailSiswaPage(
+                      request: request,
+                      showAcceptButton: true,
+                    ),
+                  ),
                 );
               },
             );

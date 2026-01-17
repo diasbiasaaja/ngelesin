@@ -1,4 +1,5 @@
 class Guru {
+  final String uid;
   final String nama;
   final String mapel;
   final String bio;
@@ -14,6 +15,7 @@ class Guru {
   final double jarakKm;
 
   Guru({
+    required this.uid,
     required this.nama,
     required this.mapel,
     required this.bio,

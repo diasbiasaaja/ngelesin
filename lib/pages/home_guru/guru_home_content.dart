@@ -32,7 +32,7 @@ class GuruHomeContent extends StatelessWidget {
 
     final user = FirebaseAuth.instance.currentUser;
 
-    // ✅ kalau auth belum ready, jangan loading
+    // ✅ kalau auth belum ready
     if (user == null) {
       return SafeArea(
         bottom: false,
@@ -67,14 +67,13 @@ class GuruHomeContent extends StatelessWidget {
       );
     }
 
-    // ✅ FIX RTDB URL flutter web
+    // ✅ FIX UTAMA: guruKey = UID
+    final guruUid = user.uid;
+
     final db = FirebaseDatabase.instanceFor(
       app: FirebaseAuth.instance.app,
       databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
     ).ref();
-
-    // ✅ GURU KEY FINAL = UID (BIAR GA BERANTAK RTDB)
-    final guruKey = user.uid;
 
     return SafeArea(
       bottom: false,
@@ -86,30 +85,39 @@ class GuruHomeContent extends StatelessWidget {
           int sesiHariIni = 0;
 
           if (snapshot.hasData) {
-            // saldo
+            // ✅ ambil saldo
             final saldoSnap = snapshot.data!.snapshot.child(
-              "saldo_guru/$guruKey/saldo",
+              "saldo_guru/$guruUid/saldo",
             );
             final saldoVal = saldoSnap.value;
             saldo = (saldoVal is int)
                 ? saldoVal
                 : int.tryParse("$saldoVal") ?? 0;
 
-            // request
+            // ✅ ambil requests guru
             final reqSnap = snapshot.data!.snapshot.child(
-              "requests_guru/$guruKey",
+              "requests_guru/$guruUid",
             );
             final reqVal = reqSnap.value;
 
             if (reqVal is Map) {
-              requestCount = reqVal.length;
+              // request count = yang status paid (belum diterima)
+              for (final entry in reqVal.entries) {
+                final data = entry.value;
+                if (data is Map) {
+                  final status = (data["status"] ?? "").toString();
+                  if (status == "paid") requestCount++;
+                }
+              }
 
+              // sesiHariIni = jadwal hari ini (paid/accepted)
               for (final entry in reqVal.entries) {
                 final data = entry.value;
                 if (data is Map) {
                   final status = (data["status"] ?? "").toString();
                   final tanggal = (data["tanggal"] ?? "").toString();
-                  if (status == "paid" && _isToday(tanggal)) {
+                  if ((status == "paid" || status == "accepted") &&
+                      _isToday(tanggal)) {
                     sesiHariIni++;
                   }
                 }
@@ -121,9 +129,11 @@ class GuruHomeContent extends StatelessWidget {
             padding: EdgeInsets.only(bottom: bottomPadding),
             child: Column(
               children: [
+                // ================= HEADER =================
                 GuruHeader(namaGuru: namaGuru),
                 const SizedBox(height: 16),
 
+                // ================= SUMMARY =================
                 SummaryRow(
                   saldo: saldo,
                   sesiHariIni: sesiHariIni,
@@ -131,18 +141,23 @@ class GuruHomeContent extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 16),
+
+                // ================= AVAILABILITY =================
                 const AvailabilityCard(),
                 const SizedBox(height: 16),
+
+                // ================= SEARCH =================
                 const GuruSearchInput(),
                 const SizedBox(height: 16),
 
+                // ================= SECTION =================
                 const SectionHeader(
                   title: "Permintaan Mengajar",
                   subtitle: "",
                   roleLabel: "Guru",
                 ),
 
-                // ✅ FIX: RequestList TANPA PARAMETER
+                // ✅ RequestList FIX versi UID
                 const RequestList(),
 
                 const SizedBox(height: 24),

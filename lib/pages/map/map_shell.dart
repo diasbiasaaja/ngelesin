@@ -49,6 +49,7 @@ class _MapShellState extends State<MapShell> {
       hargaPerJam: 75000,
       hargaKelompok: HargaKelompok(harga1_5: 60000, harga6_10: 45000),
       jarakKm: 1.2,
+      uid: '',
     ),
   ];
 
