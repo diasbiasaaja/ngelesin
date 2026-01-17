@@ -52,6 +52,12 @@ class DetailSiswaPage extends StatelessWidget {
       // ✅ 4) HAPUS request biar ilang dari list paid
       await requestRef.remove();
 
+      // ✅ 4) update booking murid juga biar home siswa kebaca
+      final bookingMuridRef = db.child(
+        "bookings/${request.muridUid}/$bookingId",
+      );
+      await bookingMuridRef.update({"status": "accepted"});
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Request diterima ✅")));

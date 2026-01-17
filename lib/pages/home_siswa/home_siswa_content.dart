@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 import 'widgets/siswa_header.dart';
 import 'widgets/search_bar.dart';
@@ -34,13 +34,14 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    // ✅ query booking murid
-    final bookingQuery = (uid == null)
-        ? null
-        : FirebaseFirestore.instance
-              .collection("booking")
-              .where("murid_uid", isEqualTo: uid)
-              .orderBy("tanggal", descending: true);
+    // ✅ RTDB ref
+    final db = FirebaseDatabase.instanceFor(
+      app: FirebaseAuth.instance.app,
+      databaseURL: "https://ngelesin-default-rtdb.firebaseio.com",
+    ).ref();
+
+    // ✅ ambil bookings murid dari RTDB
+    final bookingRef = (uid == null) ? null : db.child("bookings/$uid");
 
     return SafeArea(
       bottom: false,
@@ -146,144 +147,84 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
 
             const SizedBox(height: 16),
 
-            // ================= JADWAL + RIWAYAT (FIRESTORE) =================
-            if (bookingQuery == null)
+            // ================= JADWAL + RIWAYAT (RTDB) =================
+            if (bookingRef == null)
               const Padding(
                 padding: EdgeInsets.all(20),
                 child: Text("Silakan login untuk melihat jadwal"),
               )
             else
-              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: bookingQuery.snapshots(),
+              StreamBuilder<DatabaseEvent>(
+                stream: bookingRef.onValue,
                 builder: (context, snapshot) {
-                  // ✅ kalau masih loading / belum dapet data -> jangan muter terus
+                  // loading
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Column(
-                      children: [
-                        // Jadwal hari ini
-                        JadwalHariIni(onTap: () {}),
-                        const SizedBox(height: 12),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text("Jadwal hari ini kosong"),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Riwayat
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => showRiwayat = !showRiwayat),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                const Text(
-                                  "Riwayat",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Spacer(),
-                                AnimatedRotation(
-                                  turns: showRiwayat ? 0.5 : 0,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: const Icon(Icons.keyboard_arrow_down),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        if (showRiwayat)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text("Belum ada riwayat"),
-                            ),
-                          ),
-
-                        const SizedBox(height: 24),
-                      ],
+                    return _jadwalKosongUI(
+                      jadwalKey: jadwalKey,
+                      showRiwayat: showRiwayat,
+                      toggleRiwayat: () =>
+                          setState(() => showRiwayat = !showRiwayat),
                     );
                   }
 
-                  // ✅ kalau ada error (misal orderBy / index) -> tampilkan kosong juga
-                  if (snapshot.hasError) {
-                    return Column(
-                      children: [
-                        JadwalHariIni(onTap: () {}),
-                        const SizedBox(height: 12),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text("Jadwal hari ini kosong"),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => showRiwayat = !showRiwayat),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                const Text(
-                                  "Riwayat",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Spacer(),
-                                AnimatedRotation(
-                                  turns: showRiwayat ? 0.5 : 0,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: const Icon(Icons.keyboard_arrow_down),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (showRiwayat)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text("Belum ada riwayat"),
-                            ),
-                          ),
-                        const SizedBox(height: 24),
-                      ],
+                  // kosong
+                  if (!snapshot.hasData ||
+                      snapshot.data!.snapshot.value == null) {
+                    return _jadwalKosongUI(
+                      jadwalKey: jadwalKey,
+                      showRiwayat: showRiwayat,
+                      toggleRiwayat: () =>
+                          setState(() => showRiwayat = !showRiwayat),
                     );
                   }
 
-                  // ✅ data aman
-                  final docs = snapshot.data?.docs ?? [];
+                  final raw = snapshot.data!.snapshot.value;
+                  if (raw is! Map) {
+                    return _jadwalKosongUI(
+                      jadwalKey: jadwalKey,
+                      showRiwayat: showRiwayat,
+                      toggleRiwayat: () =>
+                          setState(() => showRiwayat = !showRiwayat),
+                    );
+                  }
 
                   final today = _todayKey();
 
-                  final todayDocs = docs.where((d) {
-                    final t = d.data()["tanggal"];
-                    if (t == null) return false;
+                  // ✅ convert Map ke List booking
+                  final allBookings = raw.entries.map((e) {
+                    final data = (e.value as Map);
 
-                    final dt = (t as Timestamp).toDate();
-                    return _dateKey(dt) == today;
+                    final status = (data["status"] ?? "").toString();
+                    final guruNama = (data["guruNama"] ?? "-").toString();
+                    final mapel = (data["mapel"] ?? "-").toString();
+                    final jam = (data["jam"] ?? "-").toString();
+                    final tanggalStr = (data["tanggal"] ?? "").toString();
+
+                    return {
+                      "id": e.key.toString(),
+                      "status": status,
+                      "guruNama": guruNama,
+                      "mapel": mapel,
+                      "jam": jam,
+                      "tanggal": tanggalStr,
+                      "data": data,
+                    };
                   }).toList();
 
-                  final historyDocs = docs
-                      .where((d) => !todayDocs.contains(d))
+                  // ✅ tampilkan hanya accepted
+                  final accepted = allBookings
+                      .where((b) => b["status"] == "accepted")
+                      .toList();
+
+                  // ✅ filter jadwal hari ini
+                  final todayDocs = accepted.where((b) {
+                    final tgl = (b["tanggal"] ?? "").toString();
+                    return tgl == today;
+                  }).toList();
+
+                  // ✅ riwayat (selain hari ini)
+                  final historyDocs = accepted
+                      .where((b) => !todayDocs.contains(b))
                       .toList();
 
                   return Column(
@@ -292,12 +233,14 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                       JadwalHariIni(
                         onTap: () {
                           if (todayDocs.isEmpty) return;
+                          if (jadwalKey.currentContext == null) return;
                           Scrollable.ensureVisible(
                             jadwalKey.currentContext!,
                             duration: const Duration(milliseconds: 400),
                           );
                         },
                       ),
+
                       const SizedBox(height: 12),
 
                       if (todayDocs.isEmpty)
@@ -311,19 +254,13 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                       else
                         Column(
                           key: jadwalKey,
-                          children: todayDocs.map((doc) {
-                            final data = doc.data();
-                            final namaGuru = (data["guru_nama"] ?? "-")
-                                .toString();
-                            final mapel = (data["mapel"] ?? "-").toString();
-                            final jam = (data["jam"] ?? "-").toString();
-
+                          children: todayDocs.map((b) {
                             return JadwalGuruCard(
-                              namaGuru: namaGuru,
-                              mapel: mapel,
-                              jam: jam,
+                              namaGuru: b["guruNama"].toString(),
+                              mapel: b["mapel"].toString(),
+                              jam: b["jam"].toString(),
                               onDetail: () {
-                                debugPrint("Booking detail id: ${doc.id}");
+                                debugPrint("DETAIL BOOKING ID: ${b["id"]}");
                               },
                             );
                           }).toList(),
@@ -373,21 +310,14 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                                     ),
                                   ),
                                 ]
-                              : historyDocs.take(10).map((doc) {
-                                  final data = doc.data();
-                                  final namaGuru = (data["guru_nama"] ?? "-")
-                                      .toString();
-                                  final mapel = (data["mapel"] ?? "-")
-                                      .toString();
-                                  final jam = (data["jam"] ?? "-").toString();
-
+                              : historyDocs.take(10).map((b) {
                                   return JadwalGuruCard(
-                                    namaGuru: namaGuru,
-                                    mapel: mapel,
-                                    jam: jam,
+                                    namaGuru: b["guruNama"].toString(),
+                                    mapel: b["mapel"].toString(),
+                                    jam: b["jam"].toString(),
                                     onDetail: () {
                                       debugPrint(
-                                        "Riwayat detail id: ${doc.id}",
+                                        "RIWAYAT BOOKING ID: ${b["id"]}",
                                       );
                                     },
                                   );
@@ -402,6 +332,59 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
           ],
         ),
       ),
+    );
+  }
+
+  /// UI jadwal kosong (UX sama kayak punyamu)
+  Widget _jadwalKosongUI({
+    required GlobalKey jadwalKey,
+    required bool showRiwayat,
+    required VoidCallback toggleRiwayat,
+  }) {
+    return Column(
+      children: [
+        JadwalHariIni(onTap: () {}),
+        const SizedBox(height: 12),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text("Jadwal hari ini kosong"),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        GestureDetector(
+          onTap: toggleRiwayat,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              children: [
+                const Text(
+                  "Riwayat",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                AnimatedRotation(
+                  turns: showRiwayat ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(Icons.keyboard_arrow_down),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (showRiwayat)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text("Belum ada riwayat"),
+            ),
+          ),
+
+        const SizedBox(height: 24),
+      ],
     );
   }
 }
