@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+
 import '../detail/detail_siswa.dart';
 import '../../models/teaching_request.dart';
 
@@ -16,14 +17,6 @@ class JadwalPage extends StatefulWidget {
 class _JadwalPageState extends State<JadwalPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
-
-  // ✅ safe key RTDB
-  String safeKey(String input) {
-    return input
-        .trim()
-        .replaceAll(RegExp(r'[.#$\[\]]'), '')
-        .replaceAll(RegExp(r'\s+'), '_');
-  }
 
   // ✅ parse tanggal "yyyy-MM-dd"
   DateTime _parseDate(String dateStr) {
@@ -52,14 +45,14 @@ class _JadwalPageState extends State<JadwalPage> {
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
-
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) {
       return const Scaffold(body: Center(child: Text("Guru belum login")));
     }
 
-    // ✅ guruKey harus sama dengan yang dipakai saat accept
-    final guruKey = safeKey(user.displayName ?? user.email ?? user.uid);
+    // ✅ FIX PENTING: guruKey selalu UID
+    final guruKey = user.uid;
 
     final db = FirebaseDatabase.instanceFor(
       app: FirebaseAuth.instance.app,
@@ -74,12 +67,10 @@ class _JadwalPageState extends State<JadwalPage> {
         child: StreamBuilder<DatabaseEvent>(
           stream: jadwalRef.onValue,
           builder: (context, snapshot) {
-            // 🔄 loading
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            // ✅ ambil jadwal dari RTDB
             List<TeachingRequest> jadwalList = [];
 
             if (snapshot.hasData && snapshot.data!.snapshot.value != null) {
@@ -88,6 +79,7 @@ class _JadwalPageState extends State<JadwalPage> {
               if (raw is Map) {
                 for (final entry in raw.entries) {
                   final data = entry.value;
+
                   if (data is Map) {
                     final mapel = (data["mapel"] ?? "").toString();
                     final muridUid = (data["muridUid"] ?? "").toString();
@@ -107,29 +99,29 @@ class _JadwalPageState extends State<JadwalPage> {
                       minute: jamMulai.minute,
                     );
 
-                    final request = TeachingRequest(
-                      namaSiswa: (data["namaSiswa"] ?? muridUid)
-                          .toString(), // fallback
-                      mapel: mapel,
-                      alamat: (data["alamat"] ?? "-").toString(),
-                      jarak: (data["jarak"] ?? "-").toString(),
-                      harga: harga,
-                      jumlahSiswa: 1,
-                      tanggal: tanggal,
-                      jamMulai: jamMulai,
-                      jamSelesai: jamSelesai,
-                      bookingId: (data["bookingId"] ?? entry.key).toString(),
-                      muridUid: muridUid,
-                      fotoUrl: "",
+                    jadwalList.add(
+                      TeachingRequest(
+                        namaSiswa:
+                            (data["muridNama"] ?? data["namaSiswa"] ?? "-")
+                                .toString(),
+                        mapel: mapel,
+                        alamat: (data["alamat"] ?? "-").toString(),
+                        jarak: (data["jarak"] ?? "-").toString(),
+                        harga: harga,
+                        jumlahSiswa: 1,
+                        tanggal: tanggal,
+                        jamMulai: jamMulai,
+                        jamSelesai: jamSelesai,
+                        bookingId: (data["bookingId"] ?? entry.key).toString(),
+                        muridUid: muridUid,
+                        fotoUrl: "",
+                      ),
                     );
-
-                    jadwalList.add(request);
                   }
                 }
               }
             }
 
-            // ✅ filter jadwal hari ini & jadwal selected day
             final jadwalHariIni = jadwalList
                 .where((j) => isSameDay(j.tanggal, today))
                 .toList();
@@ -159,9 +151,9 @@ class _JadwalPageState extends State<JadwalPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
+
                   const SizedBox(height: 16),
 
-                  // ✅ CALENDAR
                   TableCalendar(
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
@@ -191,7 +183,6 @@ class _JadwalPageState extends State<JadwalPage> {
 
                   const SizedBox(height: 24),
 
-                  // ✅ JADWAL HARI INI
                   const Text(
                     "Jadwal Hari Ini",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -208,7 +199,6 @@ class _JadwalPageState extends State<JadwalPage> {
 
                   const SizedBox(height: 20),
 
-                  // ✅ JADWAL TANGGAL DIPILIH
                   if (!selectedIsToday) ...[
                     Text(
                       "Jadwal Tanggal ${DateFormat('dd-MM-yyyy').format(_selectedDay)}",
@@ -235,7 +225,6 @@ class _JadwalPageState extends State<JadwalPage> {
   }
 }
 
-// ✅ TILE (UI kamu sama)
 class _JadwalTile extends StatelessWidget {
   final TeachingRequest request;
 
@@ -248,10 +237,8 @@ class _JadwalTile extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DetailSiswaPage(
-              request: request,
-              showAcceptButton: false, // ✅ jadwal sudah accepted
-            ),
+            builder: (_) =>
+                DetailSiswaPage(request: request, showAcceptButton: false),
           ),
         );
       },
