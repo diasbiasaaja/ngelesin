@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '/models/booking.dart';
 import '/chat/chat_page.dart';
 import '../../theme/chat_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BookingDetailPage extends StatefulWidget {
   final Booking booking;
@@ -96,11 +97,20 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
                 icon: const Icon(Icons.chat),
                 label: const Text("Chat Guru"),
                 onPressed: () {
+                  final muridUid = FirebaseAuth.instance.currentUser!.uid;
+                  final guruUid = guru.uid;
+                  final namaGuru = guru.nama;
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          ChatPage(title: guru.nama, theme: chatThemeDefault),
+                      builder: (_) => ChatPage(
+                        title: namaGuru,
+                        theme: chatThemeDefault,
+                        muridUid: muridUid,
+                        guruUid:
+                            guruUid, // ini ambil dari booking / parameter page
+                      ),
                     ),
                   );
                 },

@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../theme/chat_theme.dart';
 import 'chat_bubble.dart';
+import 'chat_servise.dart';
 
 class ChatPage extends StatefulWidget {
   final String title;
   final ChatTheme theme;
 
-  const ChatPage({super.key, required this.title, required this.theme});
+  final String muridUid;
+  final String guruUid;
+
+  const ChatPage({
+    super.key,
+    required this.title,
+    required this.theme,
+    required this.muridUid,
+    required this.guruUid,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -27,11 +40,25 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    _scrollToBottom();
+
+    // ✅ reset unread pas masuk
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      ChatService.markAsRead(
+        muridUid: widget.muridUid,
+        guruUid: widget.guruUid,
+        readerUid: uid,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return const Scaffold(body: Center(child: Text("Silakan login")));
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: true,
@@ -46,30 +73,51 @@ class _ChatPageState extends State<ChatPage> {
         ),
       ),
 
-      // ================= BODY =================
       body: Column(
         children: [
-          // ===== CHAT LIST =====
+          // ===== CHAT LIST realtime =====
           Expanded(
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              children: [
-                ChatBubble(
-                  text: "Halo, saya ingin tanya jadwal les",
-                  isGuru: false,
-                  theme: widget.theme,
-                ),
-                ChatBubble(
-                  text: "Halo, silakan. Jadwal kapan?",
-                  isGuru: true,
-                  theme: widget.theme,
-                ),
-              ],
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: ChatService.streamMessages(
+                muridUid: widget.muridUid,
+                guruUid: widget.guruUid,
+              ),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snap.data?.docs ?? [];
+                if (docs.isEmpty) {
+                  return const Center(child: Text("Belum ada pesan"));
+                }
+
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollToBottom();
+                });
+
+                return ListView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  children: docs.map((d) {
+                    final data = d.data();
+                    final senderId = (data["senderId"] ?? "").toString();
+                    final text = (data["text"] ?? "").toString();
+
+                    final isGuru = senderId == widget.guruUid;
+
+                    return ChatBubble(
+                      text: text,
+                      isGuru: isGuru,
+                      theme: widget.theme,
+                    );
+                  }).toList(),
+                );
+              },
             ),
           ),
 
-          // ===== INPUT (WA STYLE) =====
+          // ===== INPUT =====
           SafeArea(
             top: false,
             child: Container(
@@ -113,8 +161,19 @@ class _ChatPageState extends State<ChatPage> {
                     backgroundColor: widget.theme.sendButtonColor,
                     child: IconButton(
                       icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: () {
+                      onPressed: () async {
+                        final text = _textController.text.trim();
+                        if (text.isEmpty) return;
+
                         _textController.clear();
+
+                        await ChatService.sendMessage(
+                          muridUid: widget.muridUid,
+                          guruUid: widget.guruUid,
+                          senderId: uid,
+                          text: text,
+                        );
+
                         _scrollToBottom();
                       },
                     ),

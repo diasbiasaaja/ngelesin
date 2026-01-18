@@ -334,14 +334,25 @@ class _HomeSiswaContentState extends State<HomeSiswaContent> {
                                   final mapel = (b["mapel"] ?? "-").toString();
                                   final jam = (b["jam"] ?? "-").toString();
                                   final bookingId = (b["id"] ?? "").toString();
+                                  final guruUid = (b["guruUid"] ?? "")
+                                      .toString();
 
                                   return JadwalGuruCard(
                                     namaGuru: guruNama,
                                     mapel: mapel,
                                     jam: jam,
                                     onDetail: () {
-                                      debugPrint("DETAIL RIWAYAT: $bookingId");
-                                      // TODO: sama kayak di atas
+                                      debugPrint("DETAIL BOOKING: $bookingId");
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => DetailGuruBookedPage(
+                                            bookingId: bookingId,
+                                            guruUid: guruUid,
+                                          ),
+                                        ),
+                                      );
                                     },
                                   );
                                 }).toList(),

@@ -5,6 +5,7 @@ import '../../models/guru_model.dart';
 import '../booking/booking_page.dart';
 import '/chat/chat_page.dart';
 import 'package:ngelesin/theme/chat_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class GuruDetailPage extends StatelessWidget {
   final Guru guru;
@@ -307,12 +308,18 @@ class GuruDetailPage extends StatelessWidget {
                           ),
                         ),
                         onPressed: () {
+                          final muridUid =
+                              FirebaseAuth.instance.currentUser!.uid;
+                          final guruUid = guru.uid;
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => ChatPage(
-                                title: nama,
+                                title: guru.nama,
                                 theme: chatThemeDefault,
+                                muridUid: muridUid,
+                                guruUid: guruUid,
                               ),
                             ),
                           );
