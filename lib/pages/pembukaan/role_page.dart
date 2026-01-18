@@ -18,7 +18,7 @@ class RolePage extends StatelessWidget {
               const SizedBox(height: 20),
 
               const Text(
-                "COLLEG PRIVATE",
+                "COLLEGE PRIVATE",
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,

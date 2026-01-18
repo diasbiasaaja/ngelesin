@@ -12,7 +12,10 @@ class Guru {
   final int hargaPerJam;
   final HargaKelompok? hargaKelompok;
 
-  final double jarakKm;
+  double jarakKm;
+
+  final double lat;
+  final double lng;
 
   Guru({
     required this.uid,
@@ -26,6 +29,8 @@ class Guru {
     required this.hargaPerJam,
     this.hargaKelompok,
     required this.jarakKm,
+    required this.lat,
+    required this.lng,
   });
 }
 

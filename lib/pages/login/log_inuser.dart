@@ -44,13 +44,11 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
-      _showMessage("Login berhasil 🎉");
+      _showMessage("Login berhasil ");
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const HomeSiswaPage(),
-        ),
+        MaterialPageRoute(builder: (_) => const HomeSiswaPage()),
       );
     } on FirebaseAuthException catch (e) {
       setState(() => isLoading = false);
@@ -70,8 +68,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showMessage(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   // ================= UI =================
@@ -200,9 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const RegisterMurid(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RegisterMurid()),
                     );
                   },
                   child: const Text(

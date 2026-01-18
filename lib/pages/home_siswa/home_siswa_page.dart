@@ -35,7 +35,10 @@ class _HomeSiswaPageState extends State<HomeSiswaPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: yellowAcc,
         shape: const CircleBorder(), // 🔥 bulat sempurna
-        onPressed: () => showMapShell(context),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MapPage()),
+        ),
         child: const Icon(Icons.map_rounded, color: Colors.black),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,

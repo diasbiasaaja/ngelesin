@@ -69,7 +69,7 @@ class GuruDetailPage extends StatelessWidget {
 
           final bio = (data["bio"] ?? guru.bio).toString();
 
-          // di firestore kamu: sertifikat_url, bukan fotoUrl
+          // di firestore kamu: foto_url
           final fotoUrl =
               (data["foto_url"] ??
                       guru.fotoUrl ??
@@ -83,7 +83,7 @@ class GuruDetailPage extends StatelessWidget {
           // ✅ harga
           final hargaPerJam = _toInt(data["harga_per_jam"] ?? guru.hargaPerJam);
 
-          // harga kelompok sesuai field kamu di GuruListPage:
+          // harga kelompok
           final harga1_5 = _toInt(data["harga_1_5"]);
           final harga6_10 = _toInt(data["harga_6_10"]);
 
@@ -97,7 +97,15 @@ class GuruDetailPage extends StatelessWidget {
             hargaKelompok = guru.hargaKelompok;
           }
 
-          // ✅ bikin guru terbaru buat ke booking
+          // ✅ ambil lat/lng dari firestore, fallback ke data guru yg sudah dibawa
+          // NOTE: pastikan field ini ada di firestore guru
+          final lat = _toDouble(data["lat"]);
+          final lng = _toDouble(data["lng"]);
+
+          final safeLat = (lat != 0.0) ? lat : guru.lat;
+          final safeLng = (lng != 0.0) ? lng : guru.lng;
+
+          // ✅ bikin guru terbaru buat ke booking (agar up-to-date)
           final newGuru = Guru(
             uid: guru.uid,
             nama: nama,
@@ -109,7 +117,13 @@ class GuruDetailPage extends StatelessWidget {
             ulasan: const [],
             hargaPerJam: hargaPerJam,
             hargaKelompok: hargaKelompok,
+
+            // jarak tetap pakai yang sudah dihitung dari list/map
             jarakKm: guru.jarakKm,
+
+            // ✅ lat/lng sudah aman
+            lat: safeLat,
+            lng: safeLng,
           );
 
           return SingleChildScrollView(
@@ -189,14 +203,12 @@ class GuruDetailPage extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 // ✅ ULASAN dari collection reviews
-                // ✅ ULASAN dari collection reviews (ANTI ERROR)
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance
                       .collection("reviews")
                       .where("guruUid", isEqualTo: guru.uid)
                       .snapshots(),
                   builder: (context, reviewSnap) {
-                    // ✅ tampilkan error biar kelihatan masalahnya
                     if (reviewSnap.hasError) {
                       debugPrint("REVIEWS ERROR: ${reviewSnap.error}");
                       return Text(
@@ -222,7 +234,7 @@ class GuruDetailPage extends StatelessWidget {
 
                     final reviews = reviewSnap.data!.docs;
 
-                    // ✅ sort manual berdasarkan createdAt kalau ada
+                    // sort manual berdasarkan createdAt kalau ada
                     reviews.sort((a, b) {
                       final ad = a.data();
                       final bd = b.data();
@@ -238,10 +250,6 @@ class GuruDetailPage extends StatelessWidget {
 
                       return bTime.compareTo(aTime); // terbaru dulu
                     });
-
-                    debugPrint(
-                      "REVIEWS ADA: ${reviews.length} untuk guruUid=${guru.uid}",
-                    );
 
                     return Column(
                       children: reviews.map((doc) {

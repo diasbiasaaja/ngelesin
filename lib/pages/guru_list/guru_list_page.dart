@@ -56,6 +56,8 @@ class GuruListPage extends StatelessWidget {
           : null,
 
       ulasan: [],
+      lat: _toDouble(data["lat"]),
+      lng: _toDouble(data["lng"]),
     );
   }
 

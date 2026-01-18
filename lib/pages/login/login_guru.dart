@@ -49,11 +49,8 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
 
     try {
       // 1️⃣ LOGIN FIREBASE AUTH
-      UserCredential userCred =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: pass,
-      );
+      UserCredential userCred = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: pass);
 
       // 2️⃣ CEK DATA GURU DI FIRESTORE
       final doc = await FirebaseFirestore.instance
@@ -66,13 +63,11 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
         throw Exception("Akun ini bukan guru");
       }
 
-      _showMsg("Login berhasil 🎉", success: true);
+      _showMsg("Login berhasil ", success: true);
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const HomeGuruPage(),
-        ),
+        MaterialPageRoute(builder: (_) => const HomeGuruPage()),
       );
     } on FirebaseAuthException catch (e) {
       String msg = "Login gagal";
@@ -215,9 +210,7 @@ class _LoginGuruPageState extends State<LoginGuruPage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const RegisterGuru(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RegisterGuru()),
                     );
                   },
                   child: const Text(
