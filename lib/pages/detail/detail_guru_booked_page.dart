@@ -4,6 +4,10 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
+// ✅ TAMBAH IMPORT INI (sesuaikan path file kamu)
+import '/../chat/chat_page.dart';
+import 'package:ngelesin/theme/chat_theme.dart';
+
 class DetailGuruBookedPage extends StatefulWidget {
   final String guruUid; // UID guru di Firestore
   final String bookingId; // key booking di RTDB
@@ -51,7 +55,6 @@ class _DetailGuruBookedPageState extends State<DetailGuruBookedPage> {
       });
 
       // 2) update rating agregat di guru
-      // ambil data lama
       final guruRef = FirebaseFirestore.instance
           .collection("guru")
           .doc(guruUid);
@@ -251,31 +254,6 @@ class _DetailGuruBookedPageState extends State<DetailGuruBookedPage> {
 
                     const SizedBox(height: 18),
 
-                    // ===== Harga =====
-                    const Text(
-                      "Harga",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _HargaTile(
-                      "Harga 1 Orang / Sesi",
-                      "Rp ${hargaSingle ?? '-'}",
-                    ),
-                    _HargaTile(
-                      "Harga 1–5 Orang / Sesi",
-                      "Rp ${harga15 ?? '-'}",
-                    ),
-                    _HargaTile(
-                      "Harga 6–10 Orang / Sesi",
-                      "Rp ${harga610 ?? '-'}",
-                    ),
-
-                    const SizedBox(height: 18),
-
                     // ===== BOOKING INFO =====
                     const Text(
                       "Booking Kamu",
@@ -345,13 +323,27 @@ class _DetailGuruBookedPageState extends State<DetailGuruBookedPage> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                             ),
+
+                            // ✅ FIX: pake widget.guruUid + namaGuru
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Fitur chat nanti ya 😄"),
+                              final muridUid =
+                                  FirebaseAuth.instance.currentUser!.uid;
+                              final guruUid = widget.guruUid;
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChatPage(
+                                    title: namaGuru, // ✅ BUKAN guru.nama
+                                    theme:
+                                        chatThemeDefault, // ✅ pastiin ini ada
+                                    muridUid: muridUid,
+                                    guruUid: guruUid,
+                                  ),
                                 ),
                               );
                             },
+
                             child: const Icon(Icons.chat_bubble_outline),
                           ),
                         ),
