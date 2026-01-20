@@ -1,6 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 import 'edit_mapel_ampu.dart'; // halaman khusus guru
 
@@ -26,7 +33,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _firestore = FirebaseFirestore.instance;
 
   bool isLoading = true;
+  bool isUploadingFoto = false;
+
   String role = "guru"; // default
+
+  // ===== FOTO PROFIL =====
+  String fotoUrl = ""; // dari firestore
+  File? fotoFile; // mobile
+  Uint8List? fotoBytes; // web
+  String? fotoName;
+
+  // ===== CLOUDINARY CONFIG =====
+  final String cloudName = "dhamjmtwu";
+  final String uploadPreset = "guru_unsigned";
+  final String folderCloudinary = "guru_docs";
 
   @override
   void initState() {
@@ -56,12 +76,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
           emailC.text = (data["email"] ?? "").toString();
           telpC.text = (data["hp"] ?? "").toString();
           bioC.text = (data["bio"] ?? "").toString();
+          fotoUrl = (data["foto_url"] ?? "").toString();
           isLoading = false;
         });
         return;
       }
 
-      // ✅ cek murid (bukan siswa)
+      // ✅ cek murid
       final muridDoc = await _firestore.collection("murid").doc(uid).get();
       if (muridDoc.exists) {
         final data = muridDoc.data()!;
@@ -70,13 +91,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
           namaC.text = (data["nama"] ?? "").toString();
           emailC.text = (data["email"] ?? "").toString();
           telpC.text = (data["hp"] ?? "").toString();
+          fotoUrl = (data["foto_url"] ?? "").toString();
           isLoading = false;
         });
         return;
       }
 
       setState(() => isLoading = false);
-    } catch (e) {
+    } catch (_) {
       setState(() => isLoading = false);
     }
   }
@@ -85,16 +107,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
-    // ✅ kalau role guru -> guru, kalau murid -> murid
     final col = role == "guru" ? "guru" : "murid";
 
     await _firestore.collection(col).doc(uid).update({
       "nama": namaC.text.trim(),
       "email": emailC.text.trim(),
       "hp": telpC.text.trim(),
-
-      // ✅ hanya guru punya bio
       if (role == "guru") "bio": bioC.text.trim(),
+      // ✅ simpan foto
+      "foto_url": fotoUrl,
     });
 
     // update email auth kalau berubah
@@ -106,6 +127,124 @@ class _EditProfilePageState extends State<EditProfilePage> {
     // update password auth kalau user isi password
     if (passwordC.text.trim().isNotEmpty) {
       await _auth.currentUser?.updatePassword(passwordC.text.trim());
+    }
+  }
+
+  // ================= FOTO PROFILE =================
+
+  Future<void> _pickFoto() async {
+    final picker = ImagePicker();
+    final xFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+    );
+
+    if (xFile == null) return;
+
+    if (kIsWeb) {
+      final bytes = await xFile.readAsBytes();
+      setState(() {
+        fotoBytes = bytes;
+        fotoName = xFile.name;
+        fotoFile = null;
+      });
+    } else {
+      setState(() {
+        fotoFile = File(xFile.path);
+        fotoBytes = null;
+        fotoName = xFile.name;
+      });
+    }
+
+    // ✅ auto upload setelah pilih
+    await _uploadFotoToCloudinary();
+  }
+
+  Future<String?> _uploadCloudinary({
+    File? file,
+    Uint8List? bytes,
+    String? filename,
+  }) async {
+    try {
+      final uri = Uri.parse(
+        "https://api.cloudinary.com/v1_1/$cloudName/image/upload",
+      );
+
+      final request = http.MultipartRequest("POST", uri);
+      request.fields["upload_preset"] = uploadPreset;
+      request.fields["folder"] = folderCloudinary;
+
+      if (kIsWeb) {
+        if (bytes == null) return null;
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            "file",
+            bytes,
+            filename: filename ?? "profile.jpg",
+          ),
+        );
+      } else {
+        if (file == null) return null;
+        request.files.add(await http.MultipartFile.fromPath("file", file.path));
+      }
+
+      final response = await request.send();
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        return null;
+      }
+
+      final resStr = await response.stream.bytesToString();
+      final data = jsonDecode(resStr);
+      return data["secure_url"];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _uploadFotoToCloudinary() async {
+    try {
+      setState(() => isUploadingFoto = true);
+
+      final url = await _uploadCloudinary(
+        file: fotoFile,
+        bytes: fotoBytes,
+        filename: fotoName,
+      );
+
+      if (url == null || url.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Upload foto gagal ❌")));
+        }
+        return;
+      }
+
+      // ✅ update foto url
+      setState(() {
+        fotoUrl = url;
+      });
+
+      // ✅ simpan ke firestore langsung biar realtime
+      final uid = _auth.currentUser?.uid;
+      if (uid != null) {
+        final col = role == "guru" ? "guru" : "murid";
+        await _firestore.collection(col).doc(uid).update({"foto_url": url});
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Foto profil berhasil diubah ✅")),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Upload foto gagal ❌")));
+      }
+    } finally {
+      if (mounted) setState(() => isUploadingFoto = false);
     }
   }
 
@@ -144,17 +283,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: Column(
                       children: [
                         GestureDetector(
-                          onTap: () {},
+                          onTap: isUploadingFoto ? null : _pickFoto,
                           child: Stack(
                             children: [
                               CircleAvatar(
                                 radius: 42,
                                 backgroundColor: const Color(0xFFE5E7EB),
-                                child: const Icon(
-                                  Icons.person,
-                                  size: 42,
-                                  color: Colors.grey,
-                                ),
+                                backgroundImage: (fotoUrl.isNotEmpty)
+                                    ? NetworkImage(fotoUrl)
+                                    : null,
+                                child: (fotoUrl.isEmpty)
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 42,
+                                        color: Colors.grey,
+                                      )
+                                    : null,
                               ),
                               Positioned(
                                 bottom: 0,
@@ -165,11 +309,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     color: yellowAcc,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    size: 16,
-                                    color: navy,
-                                  ),
+                                  child: isUploadingFoto
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: navy,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.camera_alt,
+                                          size: 16,
+                                          color: navy,
+                                        ),
                                 ),
                               ),
                             ],
@@ -190,14 +343,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   _input("Nama Lengkap", namaC),
                   _input("Email", emailC),
                   _input("No. Telepon", telpC),
-
                   _input(
                     "Password (isi jika ingin ganti)",
                     passwordC,
                     isPassword: true,
                   ),
 
-                  // ✅ murid tidak akan masuk sini karena isGuru = false
                   if (isGuru) ...[
                     const SizedBox(height: 8),
                     _bioInput("Bio Guru", bioC),

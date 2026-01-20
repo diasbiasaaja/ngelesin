@@ -261,82 +261,106 @@ class _MapPageState extends State<MapPage> {
                       flex: 4,
                       child: SafeArea(
                         top: false,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Center(
-                                child: Container(
-                                  width: 40,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade300,
-                                    borderRadius: BorderRadius.circular(4),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    16,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Container(
+                                          width: 40,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade300,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const Text(
+                                        "Guru di Sekitar Kamu",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+
+                                      if (gurus.isEmpty)
+                                        const Center(
+                                          child: Text(
+                                            "Belum ada guru yang sedang ON.",
+                                          ),
+                                        )
+                                      else
+                                        SizedBox(
+                                          height: 220,
+                                          child: PageView.builder(
+                                            controller: _pageController,
+                                            itemCount: gurus.length,
+                                            onPageChanged: (i) {
+                                              setState(
+                                                () => selectedGuru = gurus[i],
+                                              );
+                                            },
+                                            itemBuilder: (_, i) {
+                                              final g = gurus[i];
+
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  right: 10,
+                                                ),
+                                                child: _GuruCard(
+                                                  guru: g,
+                                                  onDetail: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            GuruDetailPage(
+                                                              guru: g,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  onBooking: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            BookingPage(
+                                                              guru: g,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                "Guru di Sekitar Kamu",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-
-                              if (gurus.isEmpty)
-                                const Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      "Belum ada guru yang sedang ON.",
-                                    ),
-                                  ),
-                                )
-                              else
-                                // ✅ INI YANG BIKIN CARD BISA DI SCROLL
-                                Expanded(
-                                  child: PageView.builder(
-                                    controller: _pageController,
-                                    itemCount: gurus.length,
-                                    onPageChanged: (i) {
-                                      setState(() => selectedGuru = gurus[i]);
-                                    },
-                                    itemBuilder: (_, i) {
-                                      final g = gurus[i];
-
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 10,
-                                        ),
-                                        child: _GuruCard(
-                                          guru: g,
-                                          onDetail: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    GuruDetailPage(guru: g),
-                                              ),
-                                            );
-                                          },
-                                          onBooking: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    BookingPage(guru: g),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -467,7 +491,6 @@ class _GuruCard extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
           ),
           const SizedBox(height: 10),
-
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 4),
@@ -484,9 +507,7 @@ class _GuruCard extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
           Row(
             children: [
               Expanded(
